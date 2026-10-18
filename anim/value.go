@@ -71,6 +71,13 @@ func (v *Value) Kick(velocity float32) {
 	v.wake()
 }
 
+// Bump kicks the value hard enough that, critically damped and at rest, it
+// swings about px away before coming back. Bouncier springs swing somewhat
+// further. Eased values ignore it.
+func (v *Value) Bump(px float32) {
+	v.Kick(px * v.curve().rate() * e)
+}
+
 // SetSpring changes the physics; nil means Default.
 func (v *Value) SetSpring(s *Spring) { v.spring = s }
 
@@ -89,18 +96,26 @@ func (v *Value) wake() {
 	}
 }
 
-func (v *Value) step(dt float32) {
-	s := v.spring
-	if s == nil {
-		s = Default
+func (v *Value) curve() *Spring {
+	if v.spring == nil {
+		return Default
 	}
-	k, c := s.coefficients()
-	n := int(dt/substep) + 1
-	h := dt / float32(n)
+	return v.spring
+}
+
+func (v *Value) step(dt float32) {
+	s := v.curve()
 	x, vel := v.current-v.target, v.velocity
-	for i := 0; i < n; i++ {
-		vel += (-k*x - c*vel) * h
-		x += vel * h
+	if s.Ease {
+		x, vel = x*expNeg(s.rate()*dt), 0
+	} else {
+		k, c := s.coefficients()
+		n := int(dt/substep) + 1
+		h := dt / float32(n)
+		for i := 0; i < n; i++ {
+			vel += (-k*x - c*vel) * h
+			x += vel * h
+		}
 	}
 	p := v.precision
 	if p == 0 {
@@ -111,6 +126,32 @@ func (v *Value) step(dt float32) {
 		return
 	}
 	v.current, v.velocity = v.target+x, vel
+}
+
+const e = 2.7182817
+
+// expNeg approximates e^(-x) for x >= 0. math.Exp is float64, which the
+// ESP32-S3 FPU does in software, so the argument is halved until small, a
+// (2,2) Padé approximant applied, and the result squared back up.
+func expNeg(x float32) float32 {
+	if x <= 0 {
+		return 1
+	}
+	if x > 16 {
+		return 0
+	}
+	n := 0
+	for x > 0.5 {
+		x *= 0.5
+		n++
+	}
+	x2 := x * x / 12
+	h := x / 2
+	r := (1 - h + x2) / (1 + h + x2)
+	for ; n > 0; n-- {
+		r *= r
+	}
+	return r
 }
 
 func abs(x float32) float32 {
