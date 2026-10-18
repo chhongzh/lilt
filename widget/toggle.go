@@ -25,8 +25,8 @@ func (m *mark) Leaf() {}
 
 func (m *mark) Measure(ui.Vec2) ui.Vec2 { return ui.Vec2{X: markSize, Y: markSize} }
 
-// turn is not called set: TinyGo 0.42 crashes compiling a type that embeds
-// ui.Box and declares a method named like one of Box's unexported ones.
+// turn is not called set: TinyGo 0.42 and 0.43 crash compiling a type that
+// embeds ui.Box and declares a method named like one of Box's unexported ones.
 func (m *mark) turn(on bool) {
 	if on {
 		m.on.Set(1)

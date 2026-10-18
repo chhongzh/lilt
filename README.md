@@ -12,7 +12,7 @@ gfx       Screen 接口、带裁剪和平移的 Canvas、字体
 ui        节点树、布局（Flex / Grid / Stack）、App 主循环、屏幕栈、焦点、输入、光标、主题
 widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Input、软键盘
 driver    SH1106 驱动（待重写）
-examples  gallery 演示，以及跑 gallery 的 ESP32-S3 + SH1106 固件
+examples  gallery 演示，以及跑 gallery 的 ESP32-S3 固件（esp32s3-generic）
 cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截图拼图
 ```
 
@@ -20,7 +20,7 @@ cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截�
 
 ## 接入一块屏幕
 
-驱动实现 `gfx.Screen` 即可；能反色的屏再实现 `gfx.Inverter`，光标会改成反色绘制。现成的 tinygo driver 可以用 `gfx.FromDisplayer` 包一层，但它的 `FillRect` 退化成逐点画，最好自己写适配器（参考 [examples/esp32s3-sh1106/main.go](examples/esp32s3-sh1106/main.go)）。
+驱动实现 `gfx.Screen` 即可；能反色的屏再实现 `gfx.Inverter`，光标会改成反色绘制。现成的 tinygo driver 可以用 `gfx.FromDisplayer` 包一层，但它的 `FillRect` 退化成逐点画，最好自己写适配器（参考 [examples/esp32s3-generic/main.go](examples/esp32s3-generic/main.go)）。
 
 ```go
 app := ui.NewApp(screen)
@@ -56,20 +56,13 @@ app.Run() // 或者在自己的循环里调用 app.Frame(dt)
 gofmt -l anim gfx ui widget examples cmd
 go vet ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
 go run ./cmd/preview -o /tmp/preview
-tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-sh1106
+tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
 
 `go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。
 
 preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。
 
-## 示例固件的接线
+## 示例固件
 
-ESP32-S3，SH1106 走 10 MHz SPI。按键用下拉输入，按下读到高电平。
-
-| 功能 | 引脚 |
-| --- | --- |
-| 屏幕 SCK / SDO | GPIO4 / GPIO5 |
-| 屏幕 RES / DC / CS | GPIO6 / GPIO7 / GPIO15 |
-| UP / DOWN / LEFT / RIGHT | GPIO16 / 17 / 18 / 8 |
-| OK / Back / Menu | GPIO3 / 46 / 9 |
+[examples/esp32s3-generic](examples/esp32s3-generic) 是一台 ESP32-S3 + SH1106 + 五向摇杆的掌机，额外带一个实时显示引脚电平的按键页。材料、接线和烧录步骤见它的 [README](examples/esp32s3-generic/README.md)。
