@@ -34,6 +34,9 @@ var demos = []Demo{
 	{"Buttons", buttons},
 	{"Toggles", toggles},
 	{"Select", selects},
+	{"Chips", chips},
+	{"Flex", flex},
+	{"Grid", grid},
 	{"Input", inputs},
 	{"Long text", longText},
 }
@@ -102,6 +105,91 @@ func selects() ui.Drawable {
 		}, 0),
 	)
 	return Page("Select", l)
+}
+
+// caption is a small muted line naming the row below it.
+func caption(s string) *widget.Label {
+	t := ui.CurrentTheme
+	return widget.NewLabel(s, widget.Font(t.SmallFont), widget.TextColor(t.Muted),
+		ui.Padding(ui.LTRB(4, 2, 4, 0)))
+}
+
+func chips() ui.Drawable {
+	l := widget.NewList()
+	ui.Add(l,
+		caption("Difficulty"),
+		widget.NewChoice([]string{"Easy", "Normal", "Hard", "Insane", "Expert"}, 1),
+		caption("Mods"),
+		widget.NewToggles([]string{"HD", "HR", "DT", "FL", "NF", "EZ"}),
+		caption("Rate"),
+		widget.NewChoice([]string{"0.5x", "0.75x", "1x", "1.25x", "1.5x", "2x"}, 2),
+	)
+	return Page("Chips", l)
+}
+
+// flex lays three boxes out in a row, with chips below switching the row's
+// main alignment and making the middle box grow. The boxes glide to their
+// new places.
+func flex() ui.Drawable {
+	t := ui.CurrentTheme
+	small := widget.Font(t.SmallFont)
+	row := ui.NewRow(ui.Gap(2), ui.Padding(ui.XY(4, 2)))
+	boxes := make([]*widget.Label, 3)
+	for i, s := range []string{"1", "2", "3"} {
+		boxes[i] = widget.NewLabel(s, small, widget.TextAlign(0.5), ui.Border(t.Foreground),
+			ui.Radius(t.Radius), ui.Padding(ui.XY(5, 1)), ui.AnimateLayout())
+		ui.Add(row, boxes[i])
+	}
+	aligns := []ui.MainAlign{ui.MainStart, ui.MainCenter, ui.MainEnd, ui.MainSpaceBetween}
+	main := widget.NewChoice([]string{"Start", "Center", "End", "Between"}, 0,
+		small, widget.OnChange(func(i int) { row.SetMainAlign(aligns[i]) }))
+	grow := widget.NewToggles([]string{"Grow 2"}, small)
+	grow.SetOnChange(func(int) {
+		var g float32
+		if grow.On(0) {
+			g = 1
+		}
+		boxes[1].SetGrow(g)
+	})
+
+	// The row stays put above the controls so every change stays in view.
+	l := widget.NewList()
+	ui.Add(l, caption("Main align"), main, caption("Grow"), grow)
+	return Page("Flex", ui.NewColumn(ui.Children(row, l)))
+}
+
+// grid is a PIN pad: twelve buttons in three equal columns.
+func grid() ui.Drawable {
+	t := ui.CurrentTheme
+	small := widget.Font(t.SmallFont)
+	const prompt = "Enter a PIN"
+	pin := ""
+	display := widget.NewLabel(prompt, small, widget.TextAlign(0.5))
+	press := func(k string) {
+		switch {
+		case k == "C":
+			pin = ""
+		case k == "<":
+			if pin != "" {
+				pin = pin[:len(pin)-1]
+			}
+		case len(pin) < 8:
+			pin += k
+		}
+		if pin == "" {
+			display.SetText(prompt)
+		} else {
+			display.SetText(pin)
+		}
+	}
+	g := ui.NewGrid(ui.Columns(ui.Fr(1), ui.Fr(1), ui.Fr(1)), ui.Gap(2))
+	for _, k := range []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "<"} {
+		ui.Add(g, widget.NewButton(k, small, ui.Padding(ui.XY(2, 1)),
+			widget.OnClick(func() { press(k) })))
+	}
+	l := padded()
+	ui.Add(l, display, g)
+	return Page("Grid", l)
 }
 
 func inputs() ui.Drawable {
