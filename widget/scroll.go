@@ -31,9 +31,10 @@ var waveSprings [waveSteps]anim.Spring
 // Scroll clips its content and moves it by animating the offsets of the
 // content's children, each on its own spring: the further a child is from
 // the focus, the slower it follows, so the content moves as a wave and
-// overshoots a little along the axis. Arrow keys move focus through the content and scroll to reveal it; past
-// the last focusable node they scroll in steps, and at an edge the content
-// rubber-bands and springs back on release.
+// overshoots a little along the axis. Arrow keys move focus through the
+// content and scroll to reveal it; past the last focusable node they scroll
+// in steps, and at an edge the content rubber-bands and springs back on
+// release.
 type Scroll struct {
 	ui.Box
 	content ui.Drawable
@@ -46,6 +47,7 @@ type Scroll struct {
 	thumb [2]anim.Value // displayed scroll distance, for the thumbs
 
 	stagger float32
+	hideBar bool
 
 	dragging  bool
 	dragStart [2]int16
@@ -74,6 +76,9 @@ func (s *Scroll) init(content ui.Drawable, axes Axes) {
 // SetStagger sets how much slower each child follows per step away from
 // the focus; 0 moves the content as one piece.
 func (s *Scroll) SetStagger(f float32) { s.stagger = f }
+
+// SetScrollBar shows or hides the thumbs along the edges.
+func (s *Scroll) SetScrollBar(show bool) { s.hideBar = !show }
 
 // Content is where Add puts children.
 func (s *Scroll) Content() ui.Drawable { return s.content }
@@ -247,6 +252,11 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
 	if !s.on(i) {
 		return false
 	}
+	if next != nil && !ui.IsAncestor(s.content, next) && !s.alongside(next, i) {
+		// Leaving a row of chips sideways for one in another row would
+		// jump diagonally; treat it as the end of this one instead.
+		next = nil
+	}
 	pulled := s.pull[i] != 0
 	if e.Phase == ui.Release && pulled {
 		s.pull[i] = 0
@@ -286,6 +296,14 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
 	s.pull[i] -= sign * scrollStep
 	s.apply()
 	return true
+}
+
+// alongside reports whether d lies across from the view, so moving along
+// axis i can reach it without changing rows.
+func (s *Scroll) alongside(d ui.Drawable, i int) bool {
+	lo, size := span(ui.RestRect(s), 1-i)
+	dlo, dsize := span(ui.RestRect(d), 1-i)
+	return dlo < lo+size && lo < dlo+dsize
 }
 
 // room is how far the content can still scroll along axis i toward sign.
@@ -342,6 +360,9 @@ func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
 
 // DrawOver paints thin scroll thumbs that shrink while overscrolled.
 func (s *Scroll) DrawOver(c gfx.Canvas) {
+	if s.hideBar {
+		return
+	}
 	r := s.Rect()
 	pad := s.Padding()
 	col := ui.CurrentTheme.Foreground

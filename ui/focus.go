@@ -116,6 +116,9 @@ func restOrigin(d Drawable) (x, y float32) {
 	return
 }
 
+// RestRect is d's rect in screen pixels where its animations will settle.
+func RestRect(d Drawable) Rect { return restRect(d) }
+
 func restRect(d Drawable) Rect {
 	x, y := restOrigin(d)
 	b := d.box()
