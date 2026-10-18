@@ -1,0 +1,1 @@
+{"fps":60,"width":128,"height":64,"frames":372,"marks":{"end":371,"slow":30},"keys":[{"frame":30,"key":"down","phase":"press"},{"frame":52,"key":"down","phase":"release"},{"frame":142,"key":"down","phase":"press"},{"frame":164,"key":"down","phase":"release"},{"frame":254,"key":"up","phase":"press"},{"frame":275,"key":"up","phase":"release"}]}

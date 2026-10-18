@@ -1,0 +1,22 @@
+{
+  "name": "lilt-pv",
+  "private": true,
+  "scripts": {
+    "capture": "go run ./capture -logo && go run ./capture -script compare && go run ./capture -script compare -stiff && go run ./capture -script slow && go run ./capture",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts LiltPV out/lilt-pv.mp4",
+    "still": "remotion still src/index.ts LiltPV"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.536",
+    "@remotion/google-fonts": "^4.0.536",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.536"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}
