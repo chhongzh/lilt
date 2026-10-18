@@ -20,10 +20,18 @@ const (
 	revealMargin = 2
 	// flingFactor turns the last drag step into extra travel on release.
 	flingFactor = 8
+	// waveSteps caps how many steps from the focus the wave keeps slowing.
+	waveSteps = 8
 )
 
-// Scroll clips its content and moves it by animating the content's offset.
-// Arrow keys move focus through the content and scroll to reveal it; past
+// waveSprings[k] moves children k steps from the focused one. They are
+// derived from anim.Default on every scroll, so retuning it still applies.
+var waveSprings [waveSteps]anim.Spring
+
+// Scroll clips its content and moves it by animating the offsets of the
+// content's children, each on its own spring: the further a child is from
+// the focus, the slower it follows, so the content moves as a wave and
+// overshoots a little along the axis. Arrow keys move focus through the content and scroll to reveal it; past
 // the last focusable node they scroll in steps, and at an edge the content
 // rubber-bands and springs back on release.
 type Scroll struct {
@@ -35,6 +43,9 @@ type Scroll struct {
 	pull  [2]float32 // overscroll from keys, before rubber-banding
 	limit [2]float32
 	view  [2]float32
+	thumb [2]anim.Value // displayed scroll distance, for the thumbs
+
+	stagger float32
 
 	dragging  bool
 	dragStart [2]int16
@@ -52,12 +63,17 @@ func NewScroll(content ui.Drawable, axes Axes, opts ...ui.Option) *Scroll {
 
 func (s *Scroll) init(content ui.Drawable, axes Axes) {
 	s.content, s.axes = content, axes
+	s.stagger = 0.2
 	s.SetClip(true)
-	b := ui.BoxOf(content)
-	b.OffsetX().SetSpring(anim.Snappy)
-	b.OffsetY().SetSpring(anim.Snappy)
+	for i := range s.thumb {
+		s.thumb[i].SetSpring(anim.Snappy)
+	}
 	ui.Attach(s, content)
 }
+
+// SetStagger sets how much slower each child follows per step away from
+// the focus; 0 moves the content as one piece.
+func (s *Scroll) SetStagger(f float32) { s.stagger = f }
 
 // Content is where Add puts children.
 func (s *Scroll) Content() ui.Drawable { return s.content }
@@ -109,11 +125,65 @@ func (s *Scroll) ArrangeChildren(r ui.Rect) {
 
 func (s *Scroll) apply() {
 	for i := range s.pos {
-		if s.on(i) {
-			s.offset(i).Set(-s.pos[i] + anim.RubberBand(s.pull[i], s.view[i]))
+		if !s.on(i) {
+			continue
 		}
+		to := -s.pos[i] + anim.RubberBand(s.pull[i], s.view[i])
+		o := s.offset(i)
+		if d := to - o.Target(); d != 0 {
+			o.Jump(to)
+			s.wave(i, d)
+		}
+		s.thumb[i].Set(-to)
 	}
 	ui.Invalidate()
+}
+
+// wave leaves the content's children where they were on screen after the
+// content moved by d along axis i, so each glides after it on its own
+// spring. Without children the content itself glides.
+func (s *Scroll) wave(i int, d float32) {
+	kids := ui.BoxOf(s.content).Children()
+	if len(kids) == 0 {
+		o := s.offset(i)
+		o.SetSpring(anim.Default)
+		o.Shift(-d)
+		return
+	}
+	base := anim.Default
+	for k := range waveSprings {
+		waveSprings[k] = anim.Spring{
+			Response: base.Response * (1 + s.stagger*float32(k)),
+			Damping:  base.Damping,
+		}
+	}
+	focus := s.focusedChild(kids)
+	for n, c := range kids {
+		k := 0
+		if focus >= 0 {
+			k = min(absInt(n-focus), waveSteps-1)
+		}
+		o := ui.BoxOf(c).OffsetY()
+		if i == 0 {
+			o = ui.BoxOf(c).OffsetX()
+		}
+		o.SetSpring(&waveSprings[k])
+		o.Shift(-d)
+	}
+}
+
+// focusedChild is the index of the child holding the focus, or -1.
+func (s *Scroll) focusedChild(kids []ui.Drawable) int {
+	f := ui.Current().Focus.Current()
+	if f == nil {
+		return -1
+	}
+	for n, c := range kids {
+		if ui.IsAncestor(c, f) {
+			return n
+		}
+	}
+	return -1
 }
 
 // restRect is d's resting rect in the content's coordinates.
@@ -170,17 +240,29 @@ func arrowAxis(k ui.Key) (i int, sign float32) {
 	return 1, 1
 }
 
-func (s *Scroll) ArrowScroll(dir ui.Key, next ui.Drawable, phase ui.Phase) bool {
-	i, sign := arrowAxis(dir)
+// ArrowScroll pulls the content toward a held arrow at its end and lets
+// go on release; a tap moves on release and a held key on every repeat.
+func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
+	i, sign := arrowAxis(e.Key)
 	if !s.on(i) {
 		return false
 	}
-	if phase == ui.Release {
-		if s.pull[i] != 0 {
-			s.pull[i] = 0
+	pulled := s.pull[i] != 0
+	if e.Phase == ui.Release && pulled {
+		s.pull[i] = 0
+		s.apply()
+	}
+	if !e.Fires() {
+		if e.Phase == ui.Press && next == nil && s.room(i, sign) <= 0.5 {
+			s.pull[i] = -sign * scrollStep
 			s.apply()
+			return true
 		}
 		return false
+	}
+	if pulled && e.Phase == ui.Release {
+		// The tap was a push against the end, already shown on press.
+		return true
 	}
 	inside := next != nil && ui.IsAncestor(s.content, next)
 	// A target more than half a screen away would skip unfocusable content
@@ -193,11 +275,7 @@ func (s *Scroll) ArrowScroll(dir ui.Key, next ui.Drawable, phase ui.Phase) bool 
 			return false
 		}
 	}
-	room := s.pos[i]
-	if sign > 0 {
-		room = s.limit[i] - s.pos[i]
-	}
-	if room > 0.5 {
+	if room := s.room(i, sign); room > 0.5 {
 		s.pos[i] += sign * min(scrollStep, room)
 		s.apply()
 		return true
@@ -208,6 +286,14 @@ func (s *Scroll) ArrowScroll(dir ui.Key, next ui.Drawable, phase ui.Phase) bool 
 	s.pull[i] -= sign * scrollStep
 	s.apply()
 	return true
+}
+
+// room is how far the content can still scroll along axis i toward sign.
+func (s *Scroll) room(i int, sign float32) float32 {
+	if sign > 0 {
+		return s.limit[i] - s.pos[i]
+	}
+	return s.pos[i]
 }
 
 func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
@@ -231,7 +317,9 @@ func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
 			}
 			raw := s.dragFrom[i] + float32(s.dragStart[i]-p[i])
 			s.pos[i] = clampf(raw, 0, s.limit[i])
-			s.offset(i).Jump(-s.pos[i] - anim.RubberBand(raw-s.pos[i], s.view[i]))
+			to := -s.pos[i] - anim.RubberBand(raw-s.pos[i], s.view[i])
+			s.offset(i).Jump(to)
+			s.thumb[i].Jump(-to)
 			s.step[i] = float32(s.last[i] - p[i])
 		}
 		s.last = p
@@ -258,11 +346,11 @@ func (s *Scroll) DrawOver(c gfx.Canvas) {
 	pad := s.Padding()
 	col := ui.CurrentTheme.Foreground
 	if s.on(1) && s.limit[1] > 0 {
-		lo, size := thumb(-s.offset(1).Get(), s.limit[1], s.view[1])
+		lo, size := thumb(s.thumb[1].Get(), s.limit[1], s.view[1])
 		c.VLine(ui.Round(r.W-1), ui.Round(pad.Top+lo), ui.Round(size), col)
 	}
 	if s.on(0) && s.limit[0] > 0 {
-		lo, size := thumb(-s.offset(0).Get(), s.limit[0], s.view[0])
+		lo, size := thumb(s.thumb[0].Get(), s.limit[0], s.view[0])
 		c.HLine(ui.Round(pad.Left+lo), ui.Round(r.H-1), ui.Round(size), col)
 	}
 }
@@ -281,6 +369,13 @@ func thumb(p, limit, view float32) (lo, size float32) {
 
 func clampf(x, lo, hi float32) float32 {
 	return max(lo, min(x, hi))
+}
+
+func absInt(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 func absf(x float32) float32 {

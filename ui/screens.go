@@ -51,7 +51,24 @@ func (h *screenHost) Draw(c gfx.Canvas) {
 
 func (h *screenHost) opaque() bool { return h.transition != Sheet }
 
+// peek moves the screen d toward where it would leave.
+func (h *screenHost) peek(d float32) {
+	if h.transition == Sheet {
+		h.offsetY.Set(d)
+	} else {
+		h.offsetX.Set(d)
+	}
+}
+
 func (h *screenHost) settled() bool { return h.offsetX.Settled() && h.offsetY.Settled() }
+
+const (
+	// backPeek is how far Back held down moves the top screen; the root
+	// screen, which cannot leave, moves half as far.
+	backPeek = 8
+	// backNudge is the bounce when Back is released on the root screen.
+	backNudge = 6
+)
 
 // ScreenStack is the navigation stack. Only the top screen receives focus
 // and pointer input; screens fully covered by an opaque screen are hidden.
@@ -78,6 +95,7 @@ func (s *ScreenStack) Push(d Drawable, t Transition) {
 		}
 		host.offsetX.Set(0)
 		host.offsetY.Set(0)
+		app.Cursor.Leap()
 	}
 	s.hosts = append(s.hosts, host)
 	Attach(app.root, host)
@@ -100,10 +118,42 @@ func (s *ScreenStack) Pop() bool {
 		top.offsetY.Set(top.content.box().rect.H + 2)
 	}
 	prev.SetVisible(true)
+	app.Cursor.Leap()
 	app.Focus.Set(nil)
 	app.Focus.Set(prev.focus)
 	s.focusPending = true
 	return true
+}
+
+// back handles a Back key nothing else claimed. Pressing peeks the top
+// screen aside as if starting to dismiss it, and the cursor leans with it;
+// releasing dismisses it. The root screen bounces back instead.
+func (s *ScreenStack) back(e *KeyEvent) {
+	top := s.top()
+	if top == nil {
+		return
+	}
+	d := float32(backPeek)
+	if s.below(top) == nil {
+		d /= 2
+	}
+	switch e.Phase {
+	case Press:
+		top.peek(d)
+		if top.transition == Sheet {
+			app.Cursor.Lean(0, d)
+		} else {
+			app.Cursor.Lean(d, 0)
+		}
+	case Release:
+		app.Cursor.Lean(0, 0)
+		top.peek(0)
+		if e.Canceled || s.Pop() {
+			return
+		}
+		top.offsetX.Bump(backNudge)
+		app.Cursor.Nudge(backNudge)
+	}
 }
 
 // Top returns the content of the top screen, or nil.

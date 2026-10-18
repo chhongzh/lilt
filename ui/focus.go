@@ -1,11 +1,15 @@
 package ui
 
 // ArrowScroller is offered arrow keys by the focused node's ancestors before
-// focus moves. next is the node focus would move to, or nil at an edge or on
-// Release. Returning true consumes the key, which is how a scroll view
-// scrolls through content with nothing focusable or pushes back at its end.
+// focus moves. next is the node focus would move to, or nil at an edge.
+// Returning true consumes the key, which is how a scroll view scrolls
+// through content with nothing focusable or pushes back at its end.
+//
+// Only events that Fire may move anything. On Press a scroller may show
+// that it is at its end; a Release that does not Fire is offered to every
+// scroller so each can let go, and must return false.
 type ArrowScroller interface {
-	ArrowScroll(dir Key, next Drawable, phase Phase) bool
+	ArrowScroll(e *KeyEvent, next Drawable) bool
 }
 
 // Revealer is told when a descendant gains focus so it can scroll it into view.
@@ -260,34 +264,57 @@ func centerDist(a, b Rect) float32 {
 	return dx*dx + dy*dy
 }
 
-func (a *App) navigate(e KeyEvent) {
-	cur := a.Focus.current
-	if e.Phase == Release {
-		if cur == nil {
-			return
-		}
-		for n := cur.box().parent; n != nil; n = n.box().parent {
-			if s, ok := n.(ArrowScroller); ok {
-				s.ArrowScroll(e.Key, nil, Release)
-			}
-		}
-		return
+// leanDist is how far the cursor leans toward a held arrow.
+const leanDist = 2
+
+// navigate moves focus with the arrows. Like every key, pressing only gives
+// feedback, the cursor leaning toward the key; the move happens on release,
+// or on each repeat while the key is held.
+func (a *App) navigate(e *KeyEvent) {
+	dx, dy := arrowDir(e.Key)
+	switch e.Phase {
+	case Press:
+		a.Cursor.Lean(dx*leanDist, dy*leanDist)
+	case Release:
+		a.Cursor.Lean(0, 0)
 	}
 	scope := a.Screens.scope()
+	cur := a.Focus.current
 	if scope == nil {
 		return
 	}
 	if cur == nil {
-		a.Focus.Set(FirstFocusable(scope))
+		if e.Fires() {
+			a.Focus.Set(FirstFocusable(scope))
+		}
 		return
 	}
 	next := FindFocus(scope, cur, e.Key)
 	for n := cur.box().parent; n != nil; n = n.box().parent {
-		if s, ok := n.(ArrowScroller); ok && s.ArrowScroll(e.Key, next, e.Phase) {
+		if s, ok := n.(ArrowScroller); ok && s.ArrowScroll(e, next) {
+			if e.Phase == Press {
+				// The scroll view pulled its rows; the cursor rides along
+				// with the focused one instead of leaning away from it.
+				a.Cursor.Lean(0, 0)
+			}
 			return
 		}
 	}
-	if next != nil {
+	if next != nil && e.Fires() {
 		a.Focus.Set(next)
 	}
+}
+
+func arrowDir(k Key) (dx, dy float32) {
+	switch k {
+	case KeyLeft:
+		return -1, 0
+	case KeyRight:
+		return 1, 0
+	case KeyUp:
+		return 0, -1
+	case KeyDown:
+		return 0, 1
+	}
+	return 0, 0
 }

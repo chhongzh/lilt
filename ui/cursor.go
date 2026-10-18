@@ -10,19 +10,30 @@ import (
 type CursorShaper interface{ CursorShape(r Rect) Rect }
 
 const (
-	pressInset = 1.5
+	// Press squeeze per side, horizontally; vertically it is half.
+	pressDepth = 3
+	// Leap: how high the cursor lifts, and how much each side grows there.
+	leapHeight = 3
+	leapGrow   = 2
 	// Pointer lean: how far the cursor follows a hovering pointer, and its cap.
 	leanFactor = 0.12
 	leanMax    = 3
 )
 
-// Cursor is the single highlight that marks focus. Each edge springs on its
+// Cursor is the single highlight that marks focus. Each edge moves on its
 // own so the highlight stretches toward where focus went and then catches up.
+//
+// It lives in screen space: when focus moves to another screen it does not
+// vanish with the old one, it leaps across. Pressing squeezes it; on release
+// it springs back with a wobble.
 type Cursor struct {
 	l, t, r, b anim.Value
 	press      anim.Value
-	leanX      anim.Value
-	leanY      anim.Value
+	// Displacement on top of the focus rect: lift for Leap (up is
+	// positive), shiftX and shiftY for Lean and Nudge.
+	lift           anim.Value
+	shiftX, shiftY anim.Value
+	leanX, leanY   float32
 
 	target     Rect
 	has        bool
@@ -31,20 +42,34 @@ type Cursor struct {
 }
 
 func (c *Cursor) init() {
-	c.press.SetSpring(anim.Interactive)
 	c.press.SetPrecision(0.01)
-	c.leanX.SetSpring(anim.Interactive)
-	c.leanY.SetSpring(anim.Interactive)
+	c.lift.SetSpring(CursorLeap)
+	c.shiftX.SetSpring(CursorLean)
+	c.shiftY.SetSpring(CursorLean)
 }
 
+// pressed squeezes quickly and without bounce, saving the wobble for the release.
 func (c *Cursor) pressed(p Phase) {
 	switch p {
 	case Press:
+		c.press.SetSpring(anim.Interactive)
 		c.press.Set(1)
 	case Release:
+		c.press.SetSpring(CursorRelease)
 		c.press.Set(0)
 	}
 }
+
+// Lean moves the cursor by dx, dy and holds it there: anticipation while a
+// key is down, before the release commits the move. Lean(0, 0) lets go.
+func (c *Cursor) Lean(dx, dy float32) { c.leanX, c.leanY = dx, dy }
+
+// Leap makes the cursor jump: it lifts off, grows as if coming closer and
+// lands with a squash. Screen transitions call it.
+func (c *Cursor) Leap() { c.lift.Bump(leapHeight) }
+
+// Nudge throws the cursor about px sideways and lets it spring back.
+func (c *Cursor) Nudge(px float32) { c.shiftX.Bump(px) }
 
 func (c *Cursor) pointerAt(x, y int16) {
 	c.hasPointer, c.px, c.py = true, x, y
@@ -58,8 +83,8 @@ func (c *Cursor) update() {
 			m := c.target.Center()
 			c.moveTo(Rect{m.X, m.Y, 0, 0})
 		}
-		c.leanX.Set(0)
-		c.leanY.Set(0)
+		c.shiftX.Set(0)
+		c.shiftY.Set(0)
 		return
 	}
 	r, _ := screenRect(f)
@@ -79,14 +104,14 @@ func (c *Cursor) update() {
 	if r != c.target {
 		c.moveTo(r)
 	}
-	var lx, ly float32
+	lx, ly := c.leanX, c.leanY
 	if c.hasPointer {
 		m := r.Center()
-		lx = clamp((float32(c.px)-m.X)*leanFactor, -leanMax, leanMax)
-		ly = clamp((float32(c.py)-m.Y)*leanFactor, -leanMax, leanMax)
+		lx += clamp((float32(c.px)-m.X)*leanFactor, -leanMax, leanMax)
+		ly += clamp((float32(c.py)-m.Y)*leanFactor, -leanMax, leanMax)
 	}
-	c.leanX.Set(lx)
-	c.leanY.Set(ly)
+	c.shiftX.Set(lx)
+	c.shiftY.Set(ly)
 }
 
 func (c *Cursor) moveTo(r Rect) {
@@ -116,11 +141,12 @@ func edgeSpring(lo, hi *anim.Value, d float32) {
 }
 
 func (c *Cursor) draw(cv gfx.Canvas) {
-	in := c.press.Get() * pressInset
-	dx, dy := c.leanX.Get(), c.leanY.Get()
-	r := Rect{c.l.Get() + in + dx, c.t.Get() + in + dy, 0, 0}
+	lift := c.lift.Get()
+	in := c.press.Get()*pressDepth - lift*leapGrow/leapHeight
+	dx, dy := c.shiftX.Get(), c.shiftY.Get()-lift
+	r := Rect{c.l.Get() + in + dx, c.t.Get() + in/2 + dy, 0, 0}
 	r.W = c.r.Get() - in + dx - r.X
-	r.H = c.b.Get() - in + dy - r.Y
+	r.H = c.b.Get() - in/2 + dy - r.Y
 	if r.W < 1 || r.H < 1 {
 		return
 	}

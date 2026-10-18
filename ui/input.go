@@ -35,6 +35,15 @@ type KeyEvent struct {
 	// Canceled marks a Release that must not trigger an action, sent when a
 	// touch turns into a drag.
 	Canceled bool
+	// Repeated marks a Release after Repeats, whose action already happened.
+	Repeated bool
+}
+
+// Fires reports whether e should perform its key's action: a Release that
+// was neither canceled nor preceded by Repeats, or each Repeat while held.
+// Press itself only gives feedback.
+func (e *KeyEvent) Fires() bool {
+	return e.Phase == Repeat || e.Phase == Release && !e.Canceled && !e.Repeated
 }
 
 // KeyHandler receives keys bubbling up from the focused node. Returning true
@@ -78,8 +87,11 @@ type InputManager struct {
 	queue chan event
 	subs  []func(*KeyEvent) bool
 	owner [keyCount]Drawable
-	nav   [keyCount]bool
-	path  []Drawable
+	// nav marks keys the framework took on Press: arrows for focus
+	// movement and Back for the screen stack.
+	nav      [keyCount]bool
+	repeated [keyCount]bool
+	path     []Drawable
 
 	ptrDown    bool
 	ptrStart   PointerEvent
@@ -146,6 +158,14 @@ func (m *InputManager) dispatch(e KeyEvent) {
 	if e.Key.Arrow() {
 		a.Cursor.hasPointer = false
 	}
+	switch e.Phase {
+	case Press:
+		m.repeated[e.Key] = false
+	case Repeat:
+		m.repeated[e.Key] = true
+	case Release:
+		e.Repeated = m.repeated[e.Key]
+	}
 	for _, fn := range m.subs {
 		if fn(&e) {
 			return
@@ -163,7 +183,7 @@ func (m *InputManager) dispatch(e KeyEvent) {
 			if e.Phase == Release {
 				m.nav[e.Key] = false
 			}
-			a.navigate(e)
+			m.unclaimed(&e)
 			return
 		}
 		if e.Phase == Release {
@@ -186,12 +206,18 @@ func (m *InputManager) dispatch(e KeyEvent) {
 			return
 		}
 	}
-	switch {
-	case e.Key.Arrow():
-		m.nav[e.Key] = e.Phase == Press || m.nav[e.Key]
-		a.navigate(e)
-	case e.Key == KeyBack && e.Phase == Press:
-		a.Screens.Pop()
+	if e.Phase == Press && (e.Key.Arrow() || e.Key == KeyBack) {
+		m.nav[e.Key] = true
+		m.unclaimed(&e)
+	}
+}
+
+// unclaimed runs the framework's own behaviour for keys no node took.
+func (m *InputManager) unclaimed(e *KeyEvent) {
+	if e.Key == KeyBack {
+		app.Screens.back(e)
+	} else {
+		app.navigate(e)
 	}
 }
 

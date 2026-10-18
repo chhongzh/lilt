@@ -32,9 +32,17 @@ var CurrentTheme = &Theme{
 	Radius:     3,
 }
 
-// Cursor springs: the edge on the side of travel uses CursorLead and the
-// opposite edge CursorTrail, so the cursor stretches toward its destination.
+// Cursor motion. The edge on the side of travel eases with CursorLead and
+// the opposite edge with the slower CursorTrail, so the cursor stretches
+// toward its destination and contracts as it arrives.
 var (
-	CursorLead  = &anim.Spring{Response: 0.2, Damping: 0.9}
-	CursorTrail = &anim.Spring{Response: 0.38, Damping: 0.9}
+	CursorLead  = &anim.Spring{Response: 0.22, Ease: true}
+	CursorTrail = &anim.Spring{Response: 0.52, Ease: true}
+	// CursorRelease brings the cursor back from a press with a wobble; the
+	// press itself uses anim.Interactive.
+	CursorRelease = &anim.Spring{Response: 0.57, Damping: 0.4}
+	// CursorLeap lifts the cursor across screens and lands it with a squash.
+	CursorLeap = &anim.Spring{Response: 0.63, Damping: 0.45}
+	// CursorLean moves the cursor toward a held key and back.
+	CursorLean = &anim.Spring{Response: 0.35, Damping: 0.7}
 )
