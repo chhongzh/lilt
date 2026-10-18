@@ -3,8 +3,8 @@ package widget
 import (
 	"time"
 
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // Font sets the font of a Label, or of the label inside a widget.

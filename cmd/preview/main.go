@@ -15,14 +15,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"osu-mc/examples/gallery"
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/examples/gallery"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 const (
 	width, height = 128, 64
-	fps           = 60
+	fps           = 120
 	// GIF frames are sampled at half the frame rate to keep the file small.
 	gifEvery = 2
 )

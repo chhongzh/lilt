@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // sheetMax is the share of the screen height a Select sheet may take.

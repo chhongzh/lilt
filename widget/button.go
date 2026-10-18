@@ -4,9 +4,9 @@ import (
 	"math"
 	"time"
 
-	"osu-mc/anim"
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 type buttonState uint8

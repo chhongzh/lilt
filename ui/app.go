@@ -3,8 +3,8 @@ package ui
 import (
 	"time"
 
-	"osu-mc/anim"
-	"osu-mc/gfx"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
 )
 
 // TextTarget is a field the system keyboard edits.

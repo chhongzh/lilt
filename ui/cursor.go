@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
 )
 
 // CursorShaper lets the focused node change the cursor's rect, given in

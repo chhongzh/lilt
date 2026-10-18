@@ -1,6 +1,6 @@
-# Untitled UI Framework
+# lilt
 
-一个`osu!framework` like的给tinygo用的gui框架，实现非常丝滑的视觉效果。
+lilt：一个`osu!framework` like的给tinygo用的gui框架，实现非常丝滑的视觉效果。
 
 ## 代码质量要求
 

@@ -1,6 +1,6 @@
 package ui
 
-import "osu-mc/gfx"
+import "github.com/chhongzh/lilt/gfx"
 
 // Vec2 is a point or size in layout space. Layout works in float32 so
 // animated positions stay smooth; drawing rounds to pixels.

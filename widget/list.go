@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // List is a vertical scrolling column. Add appends rows to the column.

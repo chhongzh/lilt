@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"osu-mc/ui"
-	"osu-mc/widget"
+	"github.com/chhongzh/lilt/ui"
+	"github.com/chhongzh/lilt/widget"
 )
 
 // Build pushes the gallery's home screen onto the current app.

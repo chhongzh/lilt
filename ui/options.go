@@ -1,6 +1,6 @@
 package ui
 
-import "osu-mc/gfx"
+import "github.com/chhongzh/lilt/gfx"
 
 // Option configures a node at construction, which lets trees be written as
 // one nested expression.

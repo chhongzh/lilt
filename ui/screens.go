@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
 )
 
 // Transition is how a screen enters and leaves.

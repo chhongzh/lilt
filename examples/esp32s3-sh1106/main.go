@@ -6,10 +6,10 @@ import (
 	"machine"
 	"time"
 
-	"osu-mc/driver/sh1106"
-	"osu-mc/examples/gallery"
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/driver/sh1106"
+	"github.com/chhongzh/lilt/examples/gallery"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // GPIO19/20 are USB, 26-32 flash and PSRAM, 43/44 UART0; these avoid them.

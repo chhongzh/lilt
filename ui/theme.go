@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
 
 	"tinygo.org/x/tinyfont/notosans"
 	"tinygo.org/x/tinyfont/proggy"

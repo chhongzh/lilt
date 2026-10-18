@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
 )
 
 // Drawable is any node in the tree. It is satisfied only by types that embed

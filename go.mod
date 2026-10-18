@@ -1,4 +1,4 @@
-module osu-mc
+module github.com/chhongzh/lilt
 
 go 1.27
 

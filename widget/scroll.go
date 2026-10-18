@@ -1,9 +1,9 @@
 package widget
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // Axes selects the directions a Scroll moves in.

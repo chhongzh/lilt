@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // Input is a one-line text field. Activating it opens the app's

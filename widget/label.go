@@ -2,9 +2,9 @@
 package widget
 
 import (
-	"osu-mc/anim"
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/anim"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // Marquee says when a label too long for its box scrolls.

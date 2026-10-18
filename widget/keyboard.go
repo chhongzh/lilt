@@ -1,8 +1,8 @@
 package widget
 
 import (
-	"osu-mc/gfx"
-	"osu-mc/ui"
+	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/ui"
 )
 
 // Keyboard is the TextInputMethod Input falls back to.
