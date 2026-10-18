@@ -71,4 +71,4 @@ tinygo flash -target esp32s3-generic ./examples/esp32s3-generic
 tinygo build -target esp32s3-generic -size short -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
 
-当前大小约为 Flash 102 KB、RAM 31 KB。
+当前大小约为 Flash 111 KB、RAM 31 KB。
