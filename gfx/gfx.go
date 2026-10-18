@@ -41,9 +41,19 @@ type Displayer interface {
 	Display() error
 }
 
-// FromDisplayer adapts any tinygo driver. FillRect falls back to SetPixel,
-// so drivers with a native fill deserve their own adapter.
-func FromDisplayer(d Displayer) Screen { return displayer{d} }
+// FromDisplayer adapts any tinygo driver. Drivers with a FillRectangle
+// method fill through it; the rest fall back to one SetPixel per pixel.
+func FromDisplayer(d Displayer) Screen {
+	if f, ok := d.(rectFiller); ok {
+		return filler{displayer{d}, f}
+	}
+	return displayer{d}
+}
+
+// rectFiller is the native fill most colour drivers and ssd1306 provide.
+type rectFiller interface {
+	FillRectangle(x, y, w, h int16, c color.RGBA) error
+}
 
 type displayer struct{ Displayer }
 
@@ -54,5 +64,14 @@ func (d displayer) FillRect(x, y, w, h int16, c Color) {
 		}
 	}
 }
+
+type filler struct {
+	displayer
+	f rectFiller
+}
+
+// FillRect ignores the error: Canvas has already clipped the rectangle to
+// the screen, which is all the drivers check.
+func (d filler) FillRect(x, y, w, h int16, c Color) { d.f.FillRectangle(x, y, w, h, c) }
 
 func (d displayer) Flush() error { return d.Display() }
