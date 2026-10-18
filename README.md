@@ -2,6 +2,12 @@
 
 给 TinyGo 用的 GUI 框架，手感参照 osu!framework 和 iOS：所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。模块路径是 `github.com/chhongzh/lilt`。
 
+![实物演示：ESP32-S3 + SH1106](assets/demo.jpg)
+
+![gallery 演示](assets/highlight.gif)
+
+上图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
+
 设计需求见 [DESIGN.md](DESIGN.md)。
 
 ## 包
@@ -96,6 +102,7 @@ app := ui.NewApp(gfx.FromDisplayer(dev))
 - 列表滚动时每一行各有一个弹簧，离光标越远的行响应越慢，整列像波浪一样跟上来（`Scroll.SetStagger` 调节，0 关闭）。滚到顶或底还继续按，整个列表会往那个方向被推一下，松开弹回。
 - `Choice`（单选）和 `Toggles`（多选）是横向的一排 Chip，左右键移动，松手切换，选中项下方的横条从中间长出来。
 - 屏幕栈有两种转场：`SlideLeft`（新屏从右侧滑入，旧屏退到左边 1/3 处）和 `Sheet`（从底部升起，高度按内容算）。被不透明屏完全盖住的屏会被隐藏，不参与更新和绘制。
+- 所有放不下的 `Label` 都会滚动（跑马灯），区别只在何时滚：默认在自己或祖先获得焦点时滚，`MarqueeAlways` 一直滚。右对齐的 Label 平时停在末尾。
 - `Input` 松手后打开 `App.TextInput`；没设置时使用 `widget.Keyboard` 软键盘。
 
 ## 渲染与布局
@@ -117,7 +124,7 @@ tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-gene
 
 `go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。
 
-preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。
+preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。加 `-highlight` 改录半分钟的精华片段 `highlight.gif`，也就是本文开头那张。
 
 ## 示例固件
 
