@@ -1,76 +1,75 @@
-# osu!mc
+# Untitled UI Framework
 
-osu!microcontroller 的缩写：一个界面仿 osu!(lazer) 的单片机小项目。路径和模块名用 `osu-mc`（`!` 不能出现在路径里），界面上显示的名字一律是 `osu!mc`。
+给 TinyGo 用的 GUI 框架，手感参照 osu!framework 和 iOS：所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。模块名仍是 `osu-mc`。
 
-硬件是 ESP32-S3 加一块 128x64 的 SH1106 OLED，用 TinyGo 0.42 构建。屏幕小，UI 不堆布局容器，一切组件都表现为"列表里的一行"，用一个光标上下移动；按键松开才执行确认和返回。
+设计需求见 [DESIGN.md](DESIGN.md)。
 
-## 功能
-
-启动器里有四个应用，都是可操作的完整页面：
-
-- **Settings**：Wi-Fi 扫描与连接（密码用屏幕上的键盘输入）、关屏、About。
-- **Lorem Ipsum**：模拟 osu! 的歌曲选择：搜索、歌曲、难度、mods 和倍速三层页面，只用来展示 UI，不做任何事。
-- **HTTP Client**：输入 URL 发起 GET 请求，可保存快捷方式。快捷方式只存在内存里，重启后消失；默认带一条 `http://httpbin.org/get`。
-- **System Info**：芯片信息、内存使用、固件在 flash/RAM 里的布局、主循环每帧的负载和网络状态。
-
-## 交互
-
-六个按键加一个复位键，引脚见下方硬件表。
-
-| 键 | 作用 |
-| --- | --- |
-| UP / DOWN | 移动光标 |
-| LEFT / RIGHT | 行内移动，按住重复并逐渐加速；在行首按 LEFT 返回上一页 |
-| MID | 确认 |
-| SET | 返回 |
-| RST | 复位 |
-
-- 事件分 `Press` / `Repeat` / `Release`：按下只给光标倾斜或挤压的反馈，确认、返回、打开键盘都在**松开**时执行。
-- 列表到顶或到底时，按住会把内容和光标一起往那个方向推一段距离，松开弹回，不越界、不弹跳。
-- 左键返回时 Viewer 先露出一小截上一页（peek），松开才 pop。
-
-## 界面模型
-
-一页就是一个 `List`，里面的每一行都是 `ListItem`（`Text`、`Input`、`Row` 或嵌套的 `List`）。新组件想进列表就实现 `ListItem`。
-
-- 屏幕上看得见的每个数值都是 `animation.Value`（位置、尺寸、滚动、光标倾斜等），只改 `Target` 让弹簧动画去追，不直接写 `Current`。
-- 布局按 `Target` 算，动画进行到一半时布局也是稳定的。
-- 列表增删时，新项从高度 0 展开，被删项收拢到 0 后才释放。
-
-## 项目结构
+## 包
 
 ```
-cmd/osu-mc               固件入口：引脚、按键、屏幕、主循环与熄屏，Wi-Fi 和 HTTP 的硬件实现
-internal/application     所有应用和菜单，只依赖 Services 接口，可在主机上测试
-internal/ui              列表、光标、Viewer、事件路由、键盘、输入框
-internal/animation       动画 Value 和全局动画
-driver/sh1106            屏幕驱动
+anim      弹簧动画 Value 与全局调度器
+gfx       Screen 接口、带裁剪和平移的 Canvas、字体
+ui        节点树、布局（Flex / Grid / Stack）、App 主循环、屏幕栈、焦点、输入、光标、主题
+widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Input、软键盘
+driver    SH1106 驱动（待重写）
+examples  gallery 演示，以及跑 gallery 的 ESP32-S3 + SH1106 固件
+cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截图拼图
 ```
 
-`internal/ui` 不 import `machine`，能在主机上 `go test`。动画规则、事件路由、固件约束这些更细的说明写在 [CLAUDE.md](CLAUDE.md)。
+`anim`、`gfx`、`ui`、`widget` 不 import `machine`，主机上可以直接编译和预览。
 
-## 硬件
+## 接入一块屏幕
 
-屏幕是 10 MHz SPI 的 SH1106；按键用 GPIO 输入下拉，按下读到高电平。引脚避开了 USB、strapping、flash/PSRAM 和 UART0 占用的引脚。
+驱动实现 `gfx.Screen` 即可；能反色的屏再实现 `gfx.Inverter`，光标会改成反色绘制。现成的 tinygo driver 可以用 `gfx.FromDisplayer` 包一层，但它的 `FillRect` 退化成逐点画，最好自己写适配器（参考 [examples/esp32s3-sh1106/main.go](examples/esp32s3-sh1106/main.go)）。
+
+```go
+app := ui.NewApp(screen)
+ui.Push(page, ui.SlideLeft)
+app.Run() // 或者在自己的循环里调用 app.Frame(dt)
+```
+
+按键由调用方自己读引脚，再交给框架：
+
+- `ui.KeyPoller` 负责消抖和按住加速重复，每帧对每个键调用一次 `Poll`；
+- 也可以直接 `app.Input.Emit(key, phase)`，任何 goroutine 都能调用；
+- 触摸屏用 `EmitPointer`，物理键盘用 `EmitRune`。
+
+## 交互约定
+
+- 按键事件分 `Press`、`Repeat`、`Release`。按下只让光标收缩，所有动作都在**松手**且未被取消（`!Canceled`）时触发。触摸变成拖动后，那次松手会带上 `Canceled`。
+- `Button` 支持 `HoldToConfirm(d)`：按住时光标从右往左缩短，缩到头才执行。`OnAction` 在后台跑，按钮显示加载点，成功显示勾，失败显示叉并抖一下。
+- 列表滚到顶或底还继续按，整个列表会往那个方向被推一下，松开弹回。
+- 屏幕栈有两种转场：`SlideLeft`（新屏从右侧滑入，旧屏退到左边 1/3 处）和 `Sheet`（从底部升起，高度按内容算）。被不透明屏完全盖住的屏会被隐藏，不参与更新和绘制。
+- `Input` 松手后打开 `App.TextInput`；没设置时使用 `widget.Keyboard` 软键盘。
+
+## 渲染与布局
+
+- 任何属性变化都会标记重新布局，下一帧整树重排。
+- 有变化时整屏重绘，不做脏矩形。
+- 每帧不分配内存。
+- 只用 float32，不依赖 `strings` 包。
+- 弹簧参数采用 SwiftUI 的 Response / Damping 写法。预设（`anim.Default`、`Smooth`、`Snappy`、`Bouncy`）是指针，运行时改一处，所有用它的值一起变。
+
+## 构建与预览
+
+```sh
+gofmt -l anim gfx ui widget examples cmd
+go vet ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
+go run ./cmd/preview -o /tmp/preview
+tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-sh1106
+```
+
+`go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。
+
+preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。
+
+## 示例固件的接线
+
+ESP32-S3，SH1106 走 10 MHz SPI。按键用下拉输入，按下读到高电平。
 
 | 功能 | 引脚 |
 | --- | --- |
-| 屏幕 SCK | GPIO4 |
-| 屏幕 SDO | GPIO5 |
-| 屏幕 RES | GPIO6 |
-| 屏幕 DC | GPIO7 |
-| 屏幕 CS | GPIO15 |
+| 屏幕 SCK / SDO | GPIO4 / GPIO5 |
+| 屏幕 RES / DC / CS | GPIO6 / GPIO7 / GPIO15 |
 | UP / DOWN / LEFT / RIGHT | GPIO16 / 17 / 18 / 8 |
-| MID / SET | GPIO3 / 46 |
-| RST | GPIO9 |
-
-## 构建与验证
-
-```sh
-gofmt -l cmd internal
-go vet ./internal/...
-go test ./internal/...
-tinygo build -target esp32s3-generic -o /tmp/osu-mc.bin ./cmd/osu-mc
-```
-
-渲染类测试（`TestRender*`）用 `go test -v` 会输出 ASCII 画面，可以直接看到界面长什么样。
+| OK / Back / Menu | GPIO3 / 46 / 9 |
