@@ -31,7 +31,7 @@ type Chip struct {
 }
 
 func NewChip(text string, opts ...ui.Option) *Chip {
-	c := &Chip{label: NewLabel(text, MarqueeMode(MarqueeOff))}
+	c := &Chip{label: NewLabel(text)}
 	ui.Attach(c, c.label)
 	c.SetFocusable(true)
 	c.SetPadding(ui.LTRB(3, 1, 3, 1+chipBarH))

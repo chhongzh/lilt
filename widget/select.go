@@ -21,7 +21,7 @@ type Select struct {
 func NewSelect(title string, options []string, selected int, opts ...ui.Option) *Select {
 	s := &Select{options: options, selected: selected}
 	s.init(title)
-	s.value = NewLabel(s.optionText(), Font(ui.CurrentTheme.SmallFont), MarqueeMode(MarqueeOff))
+	s.value = NewLabel(s.optionText(), Font(ui.CurrentTheme.SmallFont))
 	s.SetTrailing(s.value)
 	s.activate = s.open
 	ui.Apply(s, opts)

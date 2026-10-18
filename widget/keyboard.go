@@ -41,7 +41,7 @@ func (k *SoftKeyboard) Open(t ui.TextTarget) {
 	th := ui.CurrentTheme
 	k.target, k.shift, k.symbols = t, false, false
 	k.buf = []rune(t.Text())
-	k.preview = NewLabel("", Font(th.SmallFont), MarqueeMode(MarqueeOff),
+	k.preview = NewLabel("", Font(th.SmallFont),
 		ui.Padding(ui.XY(2, 1)), ui.Border(th.Foreground), ui.Radius(2))
 	k.letters = k.layer(letterRows, k.key(keyShift, "^"), k.key(keyLayer, "123"))
 	k.digits = k.layer(symbolRows, nil, k.key(keyLayer, "abc"))

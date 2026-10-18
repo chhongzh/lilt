@@ -71,7 +71,7 @@ type Button struct {
 }
 
 func NewButton(text string, opts ...ui.Option) *Button {
-	b := &Button{label: NewLabel(text, MarqueeMode(MarqueeOff))}
+	b := &Button{label: NewLabel(text)}
 	b.label.SetAnchor(ui.Center)
 	b.label.SetOrigin(ui.Center)
 	b.label.OffsetY().SetSpring(anim.Snappy)

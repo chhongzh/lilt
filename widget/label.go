@@ -7,7 +7,8 @@ import (
 	"github.com/chhongzh/lilt/ui"
 )
 
-// Marquee says when a label too long for its box scrolls.
+// Marquee says when a label too long for its box scrolls. Every label that
+// overflows scrolls; the mode only picks whether it waits for focus.
 type Marquee uint8
 
 const (
@@ -15,7 +16,6 @@ const (
 	// list only animates the row being read.
 	MarqueeFocused Marquee = iota
 	MarqueeAlways
-	MarqueeOff
 )
 
 const (
@@ -117,14 +117,21 @@ func (l *Label) overflow() float32 {
 }
 
 func (l *Label) scrolling() bool {
-	switch l.marquee {
-	case MarqueeAlways:
+	if l.marquee == MarqueeAlways {
 		return true
-	case MarqueeFocused:
-		f := ui.Focused()
-		return f != nil && ui.IsAncestor(f, l)
 	}
-	return false
+	f := ui.Focused()
+	return f != nil && ui.IsAncestor(f, l)
+}
+
+// shift is how far overflowing text is moved left. It rests on the side it
+// is aligned to, so a right-aligned label shows its tail, and the marquee
+// carries it to the other side.
+func (l *Label) shift(over float32) float32 {
+	if l.align > 0.5 {
+		return over - l.scroll.Get()
+	}
+	return l.scroll.Get()
 }
 
 func (l *Label) Update(dt float32) {
@@ -172,8 +179,8 @@ func (l *Label) Draw(c gfx.Canvas) {
 		col = *l.color
 	}
 	x := box.X + ui.Round(l.align*float32(box.W-l.textW))
-	if l.overflow() > marqueeGap && l.marquee != MarqueeOff {
-		x = box.X - ui.Round(l.scroll.Get())
+	if over := l.overflow(); over > marqueeGap {
+		x = box.X - ui.Round(l.shift(over))
 	}
 	y := box.Y + (box.H-gfx.LineHeight(f))/2 + gfx.Ascent(f)
 	c.Text(f, x, y, l.text, col)
