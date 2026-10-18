@@ -11,22 +11,26 @@ import (
 	"github.com/chhongzh/lilt/widget"
 )
 
-// Build pushes the gallery's home screen onto the current app.
-func Build() {
+// Demo is a page the home list links to.
+type Demo struct {
+	Title string
+	Build func() ui.Drawable
+}
+
+// Build pushes the gallery's home screen onto the current app. Extra demos,
+// such as board-specific pages, are listed before the standard ones.
+func Build(extra ...Demo) {
 	home := widget.NewList()
-	for _, d := range demos {
-		build := d.build
-		ui.Add(home, widget.NewListItem(d.title, widget.OnClick(func() {
+	for _, d := range append(extra, demos...) {
+		build := d.Build
+		ui.Add(home, widget.NewListItem(d.Title, widget.OnClick(func() {
 			ui.Push(build(), ui.SlideLeft)
 		})))
 	}
-	ui.Push(page("Gallery", home), ui.SlideLeft)
+	ui.Push(Page("Gallery", home), ui.SlideLeft)
 }
 
-var demos = []struct {
-	title string
-	build func() ui.Drawable
-}{
+var demos = []Demo{
 	{"Buttons", buttons},
 	{"Toggles", toggles},
 	{"Select", selects},
@@ -34,8 +38,8 @@ var demos = []struct {
 	{"Long text", longText},
 }
 
-// page stacks a small muted header above body, which takes the rest.
-func page(title string, body ui.Drawable) ui.Drawable {
+// Page stacks a small muted header above body, which takes the rest.
+func Page(title string, body ui.Drawable) ui.Drawable {
 	t := ui.CurrentTheme
 	header := widget.NewLabel(title, widget.Font(t.SmallFont), widget.TextColor(t.Muted),
 		ui.Padding(ui.LTRB(4, 1, 4, 0)))
@@ -72,7 +76,7 @@ func buttons() ui.Drawable {
 			return errors.New("offline")
 		})),
 	)
-	return page("Buttons", l)
+	return Page("Buttons", l)
 }
 
 func toggles() ui.Drawable {
@@ -85,7 +89,7 @@ func toggles() ui.Drawable {
 	for _, s := range []string{"Dark", "Light", "Auto"} {
 		ui.Add(l, widget.NewRadio(g, s))
 	}
-	return page("Toggles", l)
+	return Page("Toggles", l)
 }
 
 func selects() ui.Drawable {
@@ -97,13 +101,13 @@ func selects() ui.Drawable {
 			"Nederlands", "Polski", "Portugues", "Svenska",
 		}, 0),
 	)
-	return page("Select", l)
+	return Page("Select", l)
 }
 
 func inputs() ui.Drawable {
 	l := padded()
 	ui.Add(l, widget.NewInput("Name"), widget.NewInput("Password"))
-	return page("Input", l)
+	return Page("Input", l)
 }
 
 func longText() ui.Drawable {
@@ -118,5 +122,5 @@ func longText() ui.Drawable {
 	for i := 1; i <= 30; i++ {
 		ui.Add(l, widget.NewListItem("Row "+strconv.Itoa(i)))
 	}
-	return page("Long text", l)
+	return Page("Long text", l)
 }
