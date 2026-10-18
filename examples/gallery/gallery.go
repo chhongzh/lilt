@@ -37,7 +37,9 @@ var demos = []Demo{
 	{"Chips", chips},
 	{"Flex", flex},
 	{"Grid", grid},
+	{"Scroll", scrolls},
 	{"Input", inputs},
+	{"Todo", todos},
 	{"Long text", longText},
 }
 
@@ -190,6 +192,35 @@ func grid() ui.Drawable {
 	l := padded()
 	ui.Add(l, display, g)
 	return Page("Grid", l)
+}
+
+// scrolls shows two shelves of maps that scroll sideways, like a TV menu:
+// up and down pick a shelf, left and right move along it, and the cards
+// follow the cursor as a wave.
+func scrolls() ui.Drawable {
+	small := widget.Font(ui.CurrentTheme.SmallFont)
+	playing := widget.NewLabel("Pick a map", small, ui.Padding(ui.XY(4, 1)))
+	shelves := []struct {
+		name string
+		maps []string
+	}{
+		{"Recent", []string{"Blue Zenith", "Freedom Dive", "Teo", "Glory Days",
+			"Harumachi Clover", "Senbonzakura"}},
+		{"Favourites", []string{"Kani Do-Raku", "Snow Drive", "Big Black",
+			"Night of Knights", "Airman"}},
+	}
+	l := widget.NewList()
+	for _, sh := range shelves {
+		row := ui.NewRow(ui.Gap(3), ui.Padding(ui.XY(2, 1)))
+		for _, m := range sh.maps {
+			ui.Add(row, widget.NewButton(m, small, ui.Padding(ui.XY(6, 4)),
+				widget.OnClick(func() { playing.SetText("Playing " + m) })))
+		}
+		// The bottom padding keeps the thumb clear of the cursor.
+		ui.Add(l, caption(sh.name), widget.NewScroll(row, widget.ScrollHorizontal,
+			ui.FillWidth(), ui.Padding(ui.LTRB(0, 0, 0, 3))))
+	}
+	return Page("Scroll", ui.NewColumn(ui.Children(playing, l)))
 }
 
 func inputs() ui.Drawable {
