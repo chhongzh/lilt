@@ -22,8 +22,9 @@ import (
 
 const (
 	width, height = 128, 64
-	fps           = 120
-	// GIF frames are sampled at half the frame rate to keep the file small.
+	fps           = 100
+	// GIF frames are sampled at half the frame rate, 2/100 s apart: browsers
+	// slow down any shorter GIF delay.
 	gifEvery = 2
 )
 
@@ -65,15 +66,32 @@ func (s *screen) each(x, y, w, h int16, fn func(i int)) {
 func (s *screen) Flush() error { return nil }
 
 func (s *screen) image(scale int) *image.Paletted {
-	img := image.NewPaletted(image.Rect(0, 0, width*scale, height*scale), palette)
-	for y := 0; y < height*scale; y++ {
-		for x := 0; x < width*scale; x++ {
+	return s.region(image.Rect(0, 0, width, height), scale)
+}
+
+// region renders the screen pixels in r, scaled, placed where they sit in
+// the full image so a GIF frame can carry just the part that changed.
+func (s *screen) region(r image.Rectangle, scale int) *image.Paletted {
+	img := image.NewPaletted(image.Rect(r.Min.X*scale, r.Min.Y*scale, r.Max.X*scale, r.Max.Y*scale), palette)
+	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
+		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
 			if s.px[(y/scale)*width+x/scale] {
-				img.Pix[y*img.Stride+x] = 1
+				img.Pix[img.PixOffset(x, y)] = 1
 			}
 		}
 	}
 	return img
+}
+
+// changed is the bounding box of the pixels that differ between a and b.
+func changed(a, b []bool) image.Rectangle {
+	var r image.Rectangle
+	for i := range a {
+		if a[i] != b[i] {
+			r = r.Union(image.Rect(i%width, i/width, i%width+1, i/width+1))
+		}
+	}
+	return r
 }
 
 type step struct {
@@ -271,9 +289,74 @@ func timeline() *script {
 	return s
 }
 
+// highlights is a half-minute reel of the moments that show the feel best,
+// for the README.
+func highlights() *script {
+	s := &script{}
+	s.wait(0.6)
+	s.taps(ui.KeyDown, 5, 0.14)
+	s.wait(0.2)
+	s.taps(ui.KeyUp, 5, 0.14)
+	s.wait(0.3)
+
+	s.tap(ui.KeyOK, 0.5)
+	s.tap(ui.KeyOK, 0.4)
+	s.tap(ui.KeyDown, 0.3)
+	s.emit(ui.KeyOK, ui.Press)
+	s.wait(1)
+	s.emit(ui.KeyOK, ui.Release)
+	s.wait(0.4)
+	s.tap(ui.KeyDown, 0.3)
+	s.tap(ui.KeyOK, 1.6)
+	s.tap(ui.KeyDown, 0.3)
+	s.tap(ui.KeyOK, 1.6)
+	s.tap(ui.KeyBack, 0.5)
+
+	s.taps(ui.KeyDown, 2, 0.2)
+	s.tap(ui.KeyOK, 0.5)
+	s.tap(ui.KeyDown, 0.25)
+	s.tap(ui.KeyOK, 0.5)
+	s.taps(ui.KeyDown, 5, 0.16)
+	s.tap(ui.KeyOK, 0.6)
+	s.tap(ui.KeyBack, 0.5)
+
+	s.tap(ui.KeyDown, 0.2)
+	s.tap(ui.KeyOK, 0.5)
+	s.taps(ui.KeyRight, 2, 0.25)
+	s.tap(ui.KeyOK, 0.4)
+	s.tap(ui.KeyDown, 0.25)
+	s.tap(ui.KeyOK, 0.25)
+	s.taps(ui.KeyRight, 5, 0.2)
+	s.tap(ui.KeyOK, 0.5)
+	s.tap(ui.KeyBack, 0.5)
+
+	s.taps(ui.KeyDown, 3, 0.2)
+	s.tap(ui.KeyOK, 0.5)
+	s.taps(ui.KeyRight, 4, 0.25)
+	s.tap(ui.KeyDown, 0.3)
+	s.taps(ui.KeyRight, 2, 0.25)
+	s.tap(ui.KeyOK, 0.6)
+	s.tap(ui.KeyBack, 0.5)
+
+	s.taps(ui.KeyDown, 3, 0.2)
+	s.tap(ui.KeyOK, 2)
+	// Holding Down runs to the bottom on key repeat and pushes past it.
+	s.emit(ui.KeyDown, ui.Press)
+	for range 34 {
+		s.wait(0.07)
+		s.emit(ui.KeyDown, ui.Repeat)
+	}
+	s.wait(0.5)
+	s.emit(ui.KeyDown, ui.Release)
+	s.wait(0.7)
+	s.tap(ui.KeyBack, 0.8)
+	return s
+}
+
 func main() {
 	out := flag.String("o", "preview", "output directory")
 	scale := flag.Int("scale", 4, "GIF pixel scale")
+	reel := flag.Bool("highlight", false, "record the short highlight reel as highlight.gif")
 	flag.Parse()
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		fail(err)
@@ -282,7 +365,10 @@ func main() {
 	scr := &screen{}
 	app := ui.NewApp(scr)
 	gallery.Build()
-	sc := timeline()
+	sc, name := timeline(), "session.gif"
+	if *reel {
+		sc, name = highlights(), "highlight.gif"
+	}
 
 	var anim gif.GIF
 	var shots []*image.Paletted
@@ -313,11 +399,20 @@ func main() {
 		}
 		if frame%gifEvery == 0 {
 			delay := 100 * gifEvery / fps
-			if last != nil && equal(last, scr.px[:]) {
+			var r image.Rectangle
+			if last == nil {
+				r = image.Rect(0, 0, width, height)
+			} else {
+				r = changed(last, scr.px[:])
+			}
+			if r.Empty() {
 				anim.Delay[len(anim.Delay)-1] += delay
 			} else {
-				anim.Image = append(anim.Image, scr.image(*scale))
+				// Frames are drawn over the previous one, so only the
+				// change needs to be stored.
+				anim.Image = append(anim.Image, scr.region(r, *scale))
 				anim.Delay = append(anim.Delay, delay)
+				anim.Disposal = append(anim.Disposal, gif.DisposalNone)
 				last = append(last[:0], scr.px[:]...)
 			}
 		}
@@ -327,22 +422,15 @@ func main() {
 		}
 	}
 
-	write(filepath.Join(*out, "session.gif"), func(f *os.File) error { return gif.EncodeAll(f, &anim) })
-	sheet := contactSheet(shots)
-	write(filepath.Join(*out, "shots.png"), func(f *os.File) error { return png.Encode(f, sheet) })
+	write(filepath.Join(*out, name), func(f *os.File) error { return gif.EncodeAll(f, &anim) })
+	if len(shots) > 0 {
+		sheet := contactSheet(shots)
+		write(filepath.Join(*out, "shots.png"), func(f *os.File) error { return png.Encode(f, sheet) })
+	}
 	for i, n := range names {
 		fmt.Printf("%2d %s\n", i+1, n)
 	}
 	fmt.Printf("%d gif frames, %d shots\n", len(anim.Image), len(shots))
-}
-
-func equal(a, b []bool) bool {
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // contactSheet lays shots out four to a row, left to right.
