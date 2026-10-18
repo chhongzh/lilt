@@ -19,7 +19,7 @@ func resolve(s Size, avail float32) (v float32, auto bool) {
 	case fixedSize:
 		return s.v, false
 	case relativeSize:
-		if avail >= unbounded {
+		if avail >= Unbounded {
 			return 0, true
 		}
 		return s.v * avail, false

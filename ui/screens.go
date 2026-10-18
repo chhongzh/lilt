@@ -102,7 +102,7 @@ func (s *ScreenStack) Pop() bool {
 	prev.SetVisible(true)
 	app.Focus.Set(nil)
 	app.Focus.Set(prev.focus)
-	s.focusPending = app.Focus.current == nil
+	s.focusPending = true
 	return true
 }
 
@@ -183,13 +183,19 @@ func (s *ScreenStack) update() {
 	}
 }
 
-// focusFirst runs after layout so revealing the focused node sees real rects.
+// focusFirst runs after the first layout of a new screen, so revealing the
+// focused node sees real rects. A node focused right after Push is kept and
+// revealed again.
 func (s *ScreenStack) focusFirst() {
 	if !s.focusPending {
 		return
 	}
 	s.focusPending = false
-	if sc := s.scope(); sc != nil && app.Focus.current == nil {
+	if cur := app.Focus.current; cur != nil {
+		reveal(cur)
+		return
+	}
+	if sc := s.scope(); sc != nil {
 		app.Focus.Set(FirstFocusable(sc))
 	}
 }

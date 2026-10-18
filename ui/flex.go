@@ -46,6 +46,16 @@ func newFlex(a Axis, opts []Option) *Flex {
 	return f
 }
 
+func (f *Flex) Axis() Axis { return f.axis }
+
+// SetAxis lets widgets that embed a Flex by value become columns.
+func (f *Flex) SetAxis(a Axis) {
+	if f.axis != a {
+		f.axis = a
+		Relayout()
+	}
+}
+
 func (f *Flex) Gap() float32 { return f.gap }
 
 func (f *Flex) SetGap(g float32) {
@@ -153,7 +163,11 @@ func (f *Flex) ArrangeChildren(content Rect) {
 			}
 		}
 	}
-	free = max32(free, 0)
+	// Growing children also absorb overflow, so a long label shrinks
+	// instead of pushing its siblings out of the row.
+	if grow == 0 {
+		free = max32(free, 0)
+	}
 	for _, c := range f.children {
 		cb := c.box()
 		if !cb.visible() {
@@ -162,7 +176,7 @@ func (f *Flex) ArrangeChildren(content Rect) {
 		mm, cm, lead, crossLead := f.margins(cb)
 		sm, sc := f.split(cb.measured)
 		if grow > 0 {
-			sm += free * cb.grow / grow
+			sm = max32(sm+free*cb.grow/grow, 0)
 		}
 		room := availCross - cm
 		var cp float32

@@ -35,13 +35,17 @@ func (f *FocusManager) Set(d Drawable) {
 		if fo, ok := d.(Focuser); ok {
 			fo.FocusChanged(true)
 		}
-		for n := d.box().parent; n != nil; n = n.box().parent {
-			if r, ok := n.(Revealer); ok {
-				r.Reveal(d)
-			}
-		}
+		reveal(d)
 	}
 	Invalidate()
+}
+
+func reveal(d Drawable) {
+	for n := d.box().parent; n != nil; n = n.box().parent {
+		if r, ok := n.(Revealer); ok {
+			r.Reveal(d)
+		}
+	}
 }
 
 // leaving moves focus out of b before b is removed or hidden.

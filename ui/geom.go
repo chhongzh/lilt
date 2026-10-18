@@ -61,9 +61,9 @@ var Auto = Size{}
 func Px(v float32) Size  { return Size{fixedSize, v} }
 func Rel(f float32) Size { return Size{relativeSize, f} }
 
-// unbounded is the available space along a scrolling axis. Relative sizes
+// Unbounded is the available space along a scrolling axis. Relative sizes
 // fall back to Auto there, since a fraction of infinity means nothing.
-const unbounded float32 = 1 << 24
+const Unbounded float32 = 1 << 24
 
 // Round rounds halves away from zero.
 func Round(x float32) int16 {
