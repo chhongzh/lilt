@@ -1,76 +1,131 @@
-# osu!mc
+# lilt
 
-osu!microcontroller 的缩写：一个界面仿 osu!(lazer) 的单片机小项目。路径和模块名用 `osu-mc`（`!` 不能出现在路径里），界面上显示的名字一律是 `osu!mc`。
+给 TinyGo 用的 GUI 框架，手感参照 osu!framework 和 iOS：所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。模块路径是 `github.com/chhongzh/lilt`。
 
-硬件是 ESP32-S3 加一块 128x64 的 SH1106 OLED，用 TinyGo 0.42 构建。屏幕小，UI 不堆布局容器，一切组件都表现为"列表里的一行"，用一个光标上下移动；按键松开才执行确认和返回。
+![实物演示：ESP32-S3 + SH1106](assets/demo.jpg)
 
-## 功能
+![gallery 演示](assets/highlight.gif)
 
-启动器里有四个应用，都是可操作的完整页面：
+上图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
 
-- **Settings**：Wi-Fi 扫描与连接（密码用屏幕上的键盘输入）、关屏、About。
-- **Lorem Ipsum**：模拟 osu! 的歌曲选择：搜索、歌曲、难度、mods 和倍速三层页面，只用来展示 UI，不做任何事。
-- **HTTP Client**：输入 URL 发起 GET 请求，可保存快捷方式。快捷方式只存在内存里，重启后消失；默认带一条 `http://httpbin.org/get`。
-- **System Info**：芯片信息、内存使用、固件在 flash/RAM 里的布局、主循环每帧的负载和网络状态。
+设计需求见 [DESIGN.md](DESIGN.md)。
 
-## 交互
-
-六个按键加一个复位键，引脚见下方硬件表。
-
-| 键 | 作用 |
-| --- | --- |
-| UP / DOWN | 移动光标 |
-| LEFT / RIGHT | 行内移动，按住重复并逐渐加速；在行首按 LEFT 返回上一页 |
-| MID | 确认 |
-| SET | 返回 |
-| RST | 复位 |
-
-- 事件分 `Press` / `Repeat` / `Release`：按下只给光标倾斜或挤压的反馈，确认、返回、打开键盘都在**松开**时执行。
-- 列表到顶或到底时，按住会把内容和光标一起往那个方向推一段距离，松开弹回，不越界、不弹跳。
-- 左键返回时 Viewer 先露出一小截上一页（peek），松开才 pop。
-
-## 界面模型
-
-一页就是一个 `List`，里面的每一行都是 `ListItem`（`Text`、`Input`、`Row` 或嵌套的 `List`）。新组件想进列表就实现 `ListItem`。
-
-- 屏幕上看得见的每个数值都是 `animation.Value`（位置、尺寸、滚动、光标倾斜等），只改 `Target` 让弹簧动画去追，不直接写 `Current`。
-- 布局按 `Target` 算，动画进行到一半时布局也是稳定的。
-- 列表增删时，新项从高度 0 展开，被删项收拢到 0 后才释放。
-
-## 项目结构
+## 包
 
 ```
-cmd/osu-mc               固件入口：引脚、按键、屏幕、主循环与熄屏，Wi-Fi 和 HTTP 的硬件实现
-internal/application     所有应用和菜单，只依赖 Services 接口，可在主机上测试
-internal/ui              列表、光标、Viewer、事件路由、键盘、输入框
-internal/animation       动画 Value 和全局动画
-driver/sh1106            屏幕驱动
+anim      弹簧动画 Value 与全局调度器
+gfx       Screen 接口、带裁剪和平移的 Canvas、字体
+ui        节点树、布局（Flex / Grid / Stack）、App 主循环、屏幕栈、焦点、输入、光标、主题
+widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Chip、Choice、Toggles、Input、软键盘
+driver    SH1106 驱动（待重写）
+examples  gallery 演示，以及跑 gallery 的 ESP32-S3 固件（esp32s3-generic）
+cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截图拼图
 ```
 
-`internal/ui` 不 import `machine`，能在主机上 `go test`。动画规则、事件路由、固件约束这些更细的说明写在 [CLAUDE.md](CLAUDE.md)。
+`anim`、`gfx`、`ui`、`widget` 不 import `machine`，主机上可以直接编译和预览。
 
-## 硬件
+## 接入一块屏幕
 
-屏幕是 10 MHz SPI 的 SH1106；按键用 GPIO 输入下拉，按下读到高电平。引脚避开了 USB、strapping、flash/PSRAM 和 UART0 占用的引脚。
+驱动实现 `gfx.Screen` 即可；能反色的屏再实现 `gfx.Inverter`，光标会改成反色绘制。实现了 `drivers.Displayer`（`Size`、`SetPixel`、`Display`）的 tinygo 驱动可以直接用 `gfx.FromDisplayer` 包一层。驱动自带 `FillRectangle` 时用它填充，没有就逐点画。想要反色光标或更快的填充，可以自己写适配器（参考 [examples/esp32s3-generic/main.go](examples/esp32s3-generic/main.go)）。
 
-| 功能 | 引脚 |
-| --- | --- |
-| 屏幕 SCK | GPIO4 |
-| 屏幕 SDO | GPIO5 |
-| 屏幕 RES | GPIO6 |
-| 屏幕 DC | GPIO7 |
-| 屏幕 CS | GPIO15 |
-| UP / DOWN / LEFT / RIGHT | GPIO16 / 17 / 18 / 8 |
-| MID / SET | GPIO3 / 46 |
-| RST | GPIO9 |
+```go
+app := ui.NewApp(screen)
+ui.Push(page, ui.SlideLeft)
+app.Run() // 或者在自己的循环里调用 app.Frame(dt)
+```
 
-## 构建与验证
+按键由调用方自己读引脚，再交给框架：
+
+- `ui.KeyPoller` 负责消抖和按住加速重复，每帧对每个键调用一次 `Poll`；
+- 也可以直接 `app.Input.Emit(key, phase)`，任何 goroutine 都能调用；
+- 触摸屏用 `EmitPointer`，物理键盘用 `EmitRune`。
+
+## 支持的硬件
+
+> **以下均未测试，但理论上可运行。** 实际测过的只有 [examples/esp32s3-generic](examples/esp32s3-generic) 里的 SH1106，用的是本仓库自己的驱动。
+
+`gfx.Displayer` 的方法签名和 `tinygo.org/x/drivers` 的 `Displayer` 完全一致，所以下面这些驱动（drivers v0.36.0）都能直接交给 `gfx.FromDisplayer`：
+
+```go
+dev := ssd1306.NewI2C(machine.I2C0)
+dev.Configure(ssd1306.Config{Width: 128, Height: 64})
+app := ui.NewApp(gfx.FromDisplayer(dev))
+```
+
+**带帧缓冲的单色屏**：最合适。框架画进驱动的缓冲区，`Display` 一次推整屏。
+
+| 驱动 | 屏幕 | 原生填充 |
+| --- | --- | --- |
+| `ssd1306` | SSD1306 OLED，128x64 / 128x32，I²C 或 SPI | 有 |
+| `sh1106` | SH1106 OLED，128x64 | |
+| `adafruit4650` | Adafruit FeatherWing OLED 128x64（SH1107） | |
+| `pcd8544` | Nokia 5110 LCD，84x48 | |
+| `sharpmem` | Sharp Memory LCD | |
+
+**彩色屏**：主题默认黑白，改 `ui.CurrentTheme` 的颜色即可。这些驱动的 `SetPixel` 直接写屏、`Display` 什么也不做。框架每次整屏重绘，所以画面会闪，速度也受总线限制。要流畅，建议自己在内存里放一块帧缓冲，再写一个适配器整块推送。
+
+| 驱动 | 屏幕 | 原生填充 |
+| --- | --- | --- |
+| `st7789` | ST7789 TFT，240x240 / 240x320 等 | 有 |
+| `st7735` | ST7735 TFT，128x160 / 80x160 | 有 |
+| `ili9341` | ILI9341 TFT，240x320 | 有 |
+| `gc9a01` | GC9A01 圆形 TFT，240x240 | 有 |
+| `ssd1331` | SSD1331 彩色 OLED，96x64 | 有 |
+| `ssd1351` | SSD1351 彩色 OLED，128x128 | 有 |
+| `ssd1289` | SSD1289 TFT，240x320，并口 | |
+| `hub75` | HUB75 RGB LED 点阵 | |
+
+**电子墨水屏**：带缓冲，但每次 `Display` 都要刷新整屏，耗时可达数秒，弹簧动画基本看不到。适合静态菜单，最好把 `App.Frame` 的调用频率降下来。
+
+| 驱动 | 屏幕 | 原生填充 |
+| --- | --- | --- |
+| `uc8151` | UC8151 墨水屏（如 Pimoroni Badger 2040） | 有 |
+| `gdew0154m09` | GoodDisplay 1.54 寸墨水屏 | |
+| `waveshare-epd/epd1in54` | 微雪 1.54 寸 | |
+| `waveshare-epd/epd2in13` | 微雪 2.13 寸 | |
+| `waveshare-epd/epd2in13x` | 微雪 2.13 寸三色 | |
+| `waveshare-epd/epd2in66b` | 微雪 2.66 寸三色 | |
+| `waveshare-epd/epd2in9` | 微雪 2.9 寸 | |
+| `waveshare-epd/epd2in9v2` | 微雪 2.9 寸 V2 | |
+| `waveshare-epd/epd4in2` | 微雪 4.2 寸 | |
+
+`microbitmatrix`（micro:bit 5x5）和 `unoqmatrix`（Arduino UNO Q 点阵）也实现了这个接口，但分辨率连一行字都放不下，不适合。
+
+这些驱动都没有 `InvertRect`，光标会画成主题 `Accent` 色的底色块，而不是反色。
+
+## 交互约定
+
+- 按键事件分 `Press`、`Repeat`、`Release`。按下只给反馈，动作在**松手**且未被取消（`!Canceled`）时触发；按住进入连发后，每次 `Repeat` 触发一次，松手不再补一次。`KeyEvent.Fires()` 把这条规则封装好了。触摸变成拖动后，那次松手会带上 `Canceled`。
+- 每个键的按下反馈：OK 让光标收缩；方向键让光标朝那个方向探一点，松手才移过去；Back 让当前屏往右露出一点下面的屏，松手才返回，在根屏上则只轻轻顶一下。
+- 光标换目标时先朝新位置拉长再收拢；旧目标随屏幕一起消失时，光标会跳到新位置。松开 OK 时光标带着回弹恢复原样。
+- `Button` 支持 `HoldToConfirm(d)`：按住时光标从左往右缩短，缩到右端才执行。`OnAction` 在后台跑，按钮显示加载点，成功显示勾，失败显示叉并抖一下。
+- 列表滚动时每一行各有一个弹簧，离光标越远的行响应越慢，整列像波浪一样跟上来（`Scroll.SetStagger` 调节，0 关闭）。滚到顶或底还继续按，整个列表会往那个方向被推一下，松开弹回。
+- `Choice`（单选）和 `Toggles`（多选）是横向的一排 Chip，左右键移动，松手切换，选中项下方的横条从中间长出来。
+- 屏幕栈有两种转场：`SlideLeft`（新屏从右侧滑入，旧屏退到左边 1/3 处）和 `Sheet`（从底部升起，高度按内容算）。被不透明屏完全盖住的屏会被隐藏，不参与更新和绘制。
+- 所有放不下的 `Label` 都会滚动（跑马灯），区别只在何时滚：默认在自己或祖先获得焦点时滚，`MarqueeAlways` 一直滚。右对齐的 Label 平时停在末尾。
+- `Input` 松手后打开 `App.TextInput`；没设置时使用 `widget.Keyboard` 软键盘。
+
+## 渲染与布局
+
+- 任何属性变化都会标记重新布局，下一帧整树重排。
+- 有变化时整屏重绘，不做脏矩形。
+- 每帧不分配内存。
+- 只用 float32，不依赖 `strings` 包。
+- 弹簧参数采用 SwiftUI 的 Response / Damping 写法。预设（`anim.Default`、`Smooth`、`Snappy`、`Bouncy`）是指针，运行时改一处，所有用它的值一起变。数值沿用早期版本调好的手感。`Spring.Ease` 改成指数缓动（不回弹），`Value.Bump` 给静止的值一个冲量，让它弹一下再回来。
+
+## 构建与预览
 
 ```sh
-gofmt -l cmd internal
-go vet ./internal/...
-go test ./internal/...
-tinygo build -target esp32s3-generic -o /tmp/osu-mc.bin ./cmd/osu-mc
+gofmt -l anim gfx ui widget examples cmd
+go vet ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
+go run ./cmd/preview -o /tmp/preview
+tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
 
-渲染类测试（`TestRender*`）用 `go test -v` 会输出 ASCII 画面，可以直接看到界面长什么样。
+`go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。
+
+preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。加 `-highlight` 改录半分钟的精华片段 `highlight.gif`，也就是本文开头那张。
+
+## 示例固件
+
+[examples/esp32s3-generic](examples/esp32s3-generic) 是一台 ESP32-S3 + SH1106 + 五向摇杆的掌机，额外带一个实时显示引脚电平的按键页。材料、接线和烧录步骤见它的 [README](examples/esp32s3-generic/README.md)。
