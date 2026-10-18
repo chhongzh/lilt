@@ -155,7 +155,8 @@ func flex() ui.Drawable {
 	})
 
 	// The row stays put above the controls so every change stays in view.
-	l := widget.NewList()
+	// Growing rather than filling keeps the list's bottom on screen.
+	l := widget.NewList(ui.Grow(1))
 	ui.Add(l, caption("Main align"), main, caption("Grow"), grow)
 	return Page("Flex", ui.NewColumn(ui.Children(row, l)))
 }
@@ -209,7 +210,7 @@ func scrolls() ui.Drawable {
 		{"Favourites", []string{"Kani Do-Raku", "Snow Drive", "Big Black",
 			"Night of Knights", "Airman"}},
 	}
-	l := widget.NewList()
+	l := widget.NewList(ui.Grow(1))
 	for _, sh := range shelves {
 		row := ui.NewRow(ui.Gap(3), ui.Padding(ui.XY(2, 1)))
 		for _, m := range sh.maps {
