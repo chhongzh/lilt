@@ -179,9 +179,12 @@ func (b *Button) Update(dt float32) {
 	}
 }
 
-// CursorShape shortens the cursor from the right as the hold progresses.
+// CursorShape eats the cursor from the left as the hold progresses, so it
+// runs out at the right edge.
 func (b *Button) CursorShape(r ui.Rect) ui.Rect {
-	r.W *= 1 - clampf(b.progress.Get(), 0, 1)
+	cut := r.W * clampf(b.progress.Get(), 0, 1)
+	r.X += cut
+	r.W -= cut
 	return r
 }
 
