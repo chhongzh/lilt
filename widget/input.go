@@ -1,30 +1,39 @@
 package widget
 
 import (
+	"github.com/chhongzh/lilt/anim"
 	"github.com/chhongzh/lilt/gfx"
 	"github.com/chhongzh/lilt/ui"
 )
 
-// Input is a one-line text field. Activating it opens the app's
-// TextInputMethod, or the built-in Keyboard when none is set. Characters
-// from a hardware keyboard are typed straight in.
+// Input is a one-line text field. Activating it opens ui.TextInput, or the
+// built-in Keyboard when none is set. Characters from a hardware keyboard
+// are typed straight in.
+//
+// Edits are reported through OnChange with the text before and after. Edits
+// made while a handler runs are reported together once it returns; one that
+// fails puts back the text it was given.
 type Input struct {
 	ui.Box
+	Control
 	label       *Label
 	text        string
+	reported    string
 	placeholder string
-	onChange    func(string)
+	waiting     bool
 }
 
 func NewInput(placeholder string, opts ...ui.Option) *Input {
 	in := &Input{placeholder: placeholder, label: NewLabel("")}
+	in.kind = ""
 	in.label.SetWidth(ui.Rel(1))
 	ui.Attach(in, in.label)
 	t := ui.CurrentTheme
 	in.SetFocusable(true)
 	in.SetBorder(t.Foreground)
 	in.SetRadius(t.Radius)
-	in.SetPadding(ui.XY(4, 1))
+	in.SetPadding(t.RowPadding)
+	in.OffsetX().SetSpring(anim.Bouncy)
 	in.refresh()
 	ui.Apply(in, opts)
 	return in
@@ -32,18 +41,11 @@ func NewInput(placeholder string, opts ...ui.Option) *Input {
 
 func (in *Input) Text() string { return in.text }
 
+// SetText replaces the text without calling OnChange.
 func (in *Input) SetText(s string) {
-	if s == in.text {
-		return
-	}
-	in.text = s
+	in.text, in.reported = s, s
 	in.refresh()
-	if in.onChange != nil {
-		in.onChange(s)
-	}
 }
-
-func (in *Input) SetOnChange(fn func(string)) { in.onChange = fn }
 
 func (in *Input) SetFont(f *gfx.Font) { in.label.SetFont(f) }
 
@@ -58,6 +60,35 @@ func (in *Input) refresh() {
 	in.label.SetColor(t.Foreground)
 }
 
+// edit is a change made by the user, which OnChange hears about.
+func (in *Input) edit(s string) {
+	in.text = s
+	in.refresh()
+	in.report()
+}
+
+func (in *Input) report() {
+	if in.Busy() || in.text == in.reported {
+		return
+	}
+	from, to := in.reported, in.text
+	in.reported = to
+	in.run(changeCall(in.change, from, to), func(err error) {
+		if err != nil {
+			in.SetText(from)
+			shake(in)
+			return
+		}
+		in.report()
+	})
+}
+
+// inputTarget is what the editor gets, so its result counts as an edit.
+type inputTarget struct{ in *Input }
+
+func (t inputTarget) Text() string     { return t.in.text }
+func (t inputTarget) SetText(s string) { t.in.edit(s) }
+
 func (in *Input) HandleKey(e *ui.KeyEvent) bool {
 	switch e.Key {
 	case ui.KeyOK:
@@ -66,19 +97,36 @@ func (in *Input) HandleKey(e *ui.KeyEvent) bool {
 			if m == nil {
 				m = Keyboard
 			}
-			m.Open(in)
+			m.Open(inputTarget{in})
 		}
 		return true
 	case ui.KeyChar:
-		in.SetText(in.text + string(e.Rune))
+		in.edit(in.text + string(e.Rune))
 		return true
 	case ui.KeyBackspace:
 		if e.Phase != ui.Release && in.text != "" {
-			in.SetText(dropLast(in.text))
+			in.edit(dropLast(in.text))
 		}
 		return true
 	}
 	return false
+}
+
+func (in *Input) Update(dt float32) {
+	in.tick(dt)
+	if in.Loading() != in.waiting {
+		in.waiting = !in.waiting
+		ui.Invalidate()
+	}
+}
+
+func (in *Input) DrawOver(c gfx.Canvas) {
+	if !in.waiting {
+		return
+	}
+	r := in.Rect()
+	x := ui.Round(r.W - in.Padding().Right*ui.Unit() - 9*ui.Unit())
+	drawWaiting(c, x, ui.Round(r.H/2), in.elapsed)
 }
 
 // dropLast removes the final UTF-8 character.

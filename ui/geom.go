@@ -89,3 +89,11 @@ func absf(x float32) float32 {
 	}
 	return x
 }
+
+// refLine is the line height of the default font, at which one unit is one pixel.
+const refLine = 15
+
+// Unit is one layout unit in pixels: the theme font's line height over the
+// default font's. Padding, margins, gaps and corner radii are given in
+// units, so a larger font spaces everything out to match.
+func Unit() float32 { return float32(gfx.LineHeight(CurrentTheme.Font)) / refLine }

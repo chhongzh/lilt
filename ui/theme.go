@@ -18,7 +18,14 @@ type Theme struct {
 	Muted     gfx.Color
 	Font      *gfx.Font
 	SmallFont *gfx.Font
-	Radius    int16
+	// Radius rounds bordered controls, in units.
+	Radius int16
+	// RowPadding insets the text of list rows, fields, headers and captions.
+	RowPadding Insets
+	// ButtonPadding surrounds a button's label inside its border.
+	ButtonPadding Insets
+	// Gap separates stacked controls in drawers, dialogs and padded lists.
+	Gap float32
 }
 
 // CurrentTheme defaults to light-on-dark, which suits OLED panels.
@@ -30,6 +37,10 @@ var CurrentTheme = &Theme{
 	Font:       &notosans.Notosans12pt,
 	SmallFont:  &proggy.TinySZ8pt7b,
 	Radius:     3,
+
+	RowPadding:    XY(4, 1),
+	ButtonPadding: XY(6, 2),
+	Gap:           2,
 }
 
 // Cursor motion. The edge on the side of travel eases with CursorLead and

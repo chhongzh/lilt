@@ -24,7 +24,7 @@ func Home(extra ...Demo) ui.Node {
 	for _, d := range append(extra, demos...) {
 		build := d.Build
 		ui.Add(home, widget.NewListItem(d.Title, widget.OnClick(func() {
-			ui.Push(build())
+			ui.Do(func() { ui.Push(build()) })
 		})))
 	}
 	return Page("Gallery", home)
@@ -66,17 +66,17 @@ func buttons() ui.Node {
 	var tap *widget.Button
 	tap = widget.NewButton("Tap me", widget.OnClick(func() {
 		taps++
-		tap.Label().SetText("Tapped " + strconv.Itoa(taps))
+		ui.Do(func() { tap.Label().SetText("Tapped " + strconv.Itoa(taps)) })
 	}))
 	ui.Add(l,
 		tap,
 		widget.NewButton("Hold to delete", widget.HoldToConfirm(800*time.Millisecond),
 			widget.OnClick(func() {})),
-		widget.NewButton("Save", widget.OnAction(func() error {
+		widget.NewButton("Save", widget.OnClick(func() error {
 			time.Sleep(time.Second)
 			return nil
 		})),
-		widget.NewButton("Upload", widget.OnAction(func() error {
+		widget.NewButton("Upload", widget.OnClick(func() error {
 			time.Sleep(time.Second)
 			return errors.New("offline")
 		})),
@@ -90,7 +90,7 @@ func toggles() ui.Node {
 		widget.NewCheckBox("Wi-Fi", false),
 		widget.NewCheckBox("Bluetooth", true),
 	)
-	g := widget.NewRadioGroup(0, nil)
+	g := widget.NewRadioGroup(0)
 	for _, s := range []string{"Dark", "Light", "Auto"} {
 		ui.Add(l, widget.NewRadio(g, s))
 	}
@@ -144,15 +144,12 @@ func flex() ui.Node {
 	}
 	aligns := []ui.MainAlign{ui.MainStart, ui.MainCenter, ui.MainEnd, ui.MainSpaceBetween}
 	main := widget.NewChoice([]string{"Start", "Center", "End", "Between"}, 0,
-		small, widget.OnChange(func(i int) { row.SetMainAlign(aligns[i]) }))
-	grow := widget.NewToggles([]string{"Grow 2"}, small)
-	grow.SetOnChange(func(int) {
-		var g float32
-		if grow.On(0) {
-			g = 1
-		}
-		boxes[1].SetGrow(g)
-	})
+		small, widget.OnChange(func(from, to int) {
+			ui.Do(func() { row.SetMainAlign(aligns[to]) })
+		}))
+	grow := widget.NewToggles([]string{"Grow 2"}, small, widget.OnChange(func(from, to uint32) {
+		ui.Do(func() { boxes[1].SetGrow(float32(to & 1)) })
+	}))
 
 	// The row stays put above the controls so every change stays in view.
 	// Growing rather than filling keeps the list's bottom on screen.
@@ -188,7 +185,7 @@ func grid() ui.Node {
 	g := ui.NewGrid(ui.Columns(ui.Fr(1), ui.Fr(1), ui.Fr(1)), ui.Gap(2))
 	for _, k := range []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "<"} {
 		ui.Add(g, widget.NewButton(k, small, ui.Padding(ui.XY(2, 1)),
-			widget.OnClick(func() { press(k) })))
+			widget.OnClick(func() { ui.Do(func() { press(k) }) })))
 	}
 	l := padded()
 	ui.Add(l, display, g)
@@ -215,7 +212,7 @@ func scrolls() ui.Node {
 		row := ui.NewRow(ui.Gap(3), ui.Padding(ui.XY(2, 1)))
 		for _, m := range sh.maps {
 			ui.Add(row, widget.NewButton(m, small, ui.Padding(ui.XY(6, 4)),
-				widget.OnClick(func() { playing.SetText("Playing " + m) })))
+				widget.OnClick(func() { ui.Do(func() { playing.SetText("Playing " + m) }) })))
 		}
 		// The bottom padding keeps the thumb clear of the cursor.
 		ui.Add(l, caption(sh.name), widget.NewScroll(row, widget.ScrollHorizontal,

@@ -53,17 +53,18 @@ func (m *mark) Draw(c gfx.Canvas) {
 	}
 }
 
-// CheckBox is a list row that toggles a box on release.
+// CheckBox is a list row that toggles a box on release. The box flips at
+// once; an OnChange handler that fails flips it back.
 type CheckBox struct {
 	ListItem
-	mark     mark
-	checked  bool
-	onChange func(bool)
+	mark    mark
+	checked bool
 }
 
 func NewCheckBox(title string, checked bool, opts ...ui.Option) *CheckBox {
 	cb := &CheckBox{checked: checked}
 	cb.init(title)
+	cb.kind = false
 	cb.mark.init(false)
 	if checked {
 		cb.mark.on.Jump(1)
@@ -76,50 +77,55 @@ func NewCheckBox(title string, checked bool, opts ...ui.Option) *CheckBox {
 
 func (cb *CheckBox) Checked() bool { return cb.checked }
 
+// SetChecked changes the box without calling OnChange.
 func (cb *CheckBox) SetChecked(v bool) {
 	cb.checked = v
 	cb.mark.turn(v)
 }
 
-func (cb *CheckBox) SetOnChange(fn func(bool)) { cb.onChange = fn }
-
 func (cb *CheckBox) toggle() {
-	cb.SetChecked(!cb.checked)
-	if cb.onChange != nil {
-		cb.onChange(cb.checked)
-	}
+	from := cb.checked
+	cb.SetChecked(!from)
+	cb.run(changeCall(cb.change, from, !from), func(err error) {
+		if err != nil {
+			cb.SetChecked(from)
+			shake(cb)
+		}
+	})
 }
 
-// RadioGroup keeps one of its Radios selected.
+// RadioGroup keeps one of its Radios selected. Its OnChange handler gets
+// the old and new index; one that fails puts the old selection back.
 type RadioGroup struct {
+	Control
 	radios   []*Radio
 	selected int
-	onChange func(int)
+	// picked runs on the UI goroutine after a radio is chosen, for widgets
+	// such as Select that build a group of their own.
+	picked func(from, to int)
 }
 
 // NewRadioGroup starts with selected chosen; use -1 for none.
-func NewRadioGroup(selected int, onChange func(int)) *RadioGroup {
-	return &RadioGroup{selected: selected, onChange: onChange}
+func NewRadioGroup(selected int) *RadioGroup {
+	g := &RadioGroup{selected: selected}
+	g.kind = 0
+	return g
 }
 
 func (g *RadioGroup) Selected() int { return g.selected }
 
 func (g *RadioGroup) Radios() []*Radio { return g.radios }
 
+// Select chooses radio i without calling OnChange.
 func (g *RadioGroup) Select(i int) {
-	if i == g.selected {
-		return
-	}
 	g.selected = i
 	for j, r := range g.radios {
 		r.mark.turn(j == i)
 	}
-	if g.onChange != nil {
-		g.onChange(i)
-	}
 }
 
-// Radio is a list row belonging to a RadioGroup.
+// Radio is a list row belonging to a RadioGroup. Its OnClick handler, if
+// any, runs after the group's OnChange.
 type Radio struct {
 	ListItem
 	mark  mark
@@ -141,4 +147,36 @@ func NewRadio(g *RadioGroup, title string, opts ...ui.Option) *Radio {
 	return r
 }
 
-func (r *Radio) choose() { r.group.Select(r.index) }
+// choose shows the radio's own loading while the group's handler runs, and
+// holds off the rest of the group meanwhile.
+func (r *Radio) choose() {
+	g := r.group
+	if g.busy {
+		return
+	}
+	from, to := g.selected, r.index
+	g.Select(to)
+	if g.picked != nil {
+		g.picked(from, to)
+	}
+	change, click := changeCall(g.change, from, to), clickCall(r.click)
+	call := change
+	if click != nil {
+		call = func() error {
+			if change != nil {
+				if err := change(); err != nil {
+					return err
+				}
+			}
+			return click()
+		}
+	}
+	g.busy = call != nil
+	r.run(call, func(err error) {
+		g.busy = false
+		if err != nil {
+			g.Select(from)
+			shake(r)
+		}
+	})
+}

@@ -54,5 +54,5 @@ func (d *Drawer) TitleHeight() float32 {
 	if d.title == nil {
 		return 0
 	}
-	return float32(gfx.LineHeight(d.title.Font())) + d.title.Padding().Vertical()
+	return float32(gfx.LineHeight(d.title.Font())) + d.title.Padding().Vertical()*ui.Unit()
 }

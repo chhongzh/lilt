@@ -1,7 +1,6 @@
 package widget
 
 import (
-	"math"
 	"time"
 
 	"github.com/chhongzh/lilt/anim"
@@ -22,46 +21,22 @@ const (
 // label returns.
 const resultHold = 1.2
 
-// SingleFlight runs at most one call at a time. It belongs to the UI
-// goroutine; only fn runs elsewhere.
-type SingleFlight struct{ busy bool }
-
-func (s *SingleFlight) Busy() bool { return s.busy }
-
-// Do starts fn on a new goroutine unless a call is in flight, and hands its
-// error to done on the UI goroutine. It reports whether fn started.
-func (s *SingleFlight) Do(fn func() error, done func(error)) bool {
-	if s.busy {
-		return false
-	}
-	s.busy = true
-	go func() {
-		err := fn()
-		ui.Do(func() {
-			s.busy = false
-			if done != nil {
-				done(err)
-			}
-		})
-	}()
-	return true
-}
-
-// Button runs OnClick or an async OnAction when OK is released over it.
-// Actions show loading dots and then a check or a cross, so callers never
-// write the state machine themselves. With HoldToConfirm the cursor shrinks
-// while OK is held and the button fires when the cursor is gone.
+// Button runs its OnClick handler when OK is released over it. A handler
+// still running after a moment swaps the label for loading dots and then
+// for a check, or for a cross on error; a quick one leaves the label alone
+// unless it fails. With HoldToConfirm the cursor shrinks while OK is held
+// and the button fires when the cursor is gone.
 type Button struct {
 	ui.Box
-	label   *Label
-	onClick func()
-	action  func() error
-	flight  SingleFlight
-	state   buttonState
-	timer   float32
+	Control
+	label *Label
+	state buttonState
+	timer float32
 	// mark is the result still on screen; result runs 0 to 1 as it rises in
 	// and on to 2 as it leaves upward.
 	mark buttonState
+	// after runs on the UI goroutine once the handler returns.
+	after func(error)
 
 	hold     float32
 	holding  bool
@@ -79,7 +54,7 @@ func NewButton(text string, opts ...ui.Option) *Button {
 	t := ui.CurrentTheme
 	b.SetFocusable(true)
 	b.SetClip(true)
-	b.SetPadding(ui.XY(6, 2))
+	b.SetPadding(t.ButtonPadding)
 	b.SetBorder(t.Foreground)
 	b.SetRadius(t.Radius)
 	b.OffsetX().SetSpring(anim.Bouncy)
@@ -93,9 +68,7 @@ func NewButton(text string, opts ...ui.Option) *Button {
 
 func (b *Button) Label() *Label { return b.label }
 
-func (b *Button) SetFont(f *gfx.Font)         { b.label.SetFont(f) }
-func (b *Button) SetOnClick(fn func())        { b.onClick = fn }
-func (b *Button) SetOnAction(fn func() error) { b.action = fn }
+func (b *Button) SetFont(f *gfx.Font) { b.label.SetFont(f) }
 
 func (b *Button) SetHold(d time.Duration) { b.hold = float32(d.Seconds()) }
 
@@ -105,7 +78,7 @@ func (b *Button) HandleKey(e *ui.KeyEvent) bool {
 	}
 	switch e.Phase {
 	case ui.Press:
-		if b.state == idle && b.hold > 0 {
+		if b.state == idle && !b.Busy() && b.hold > 0 {
 			b.holding, b.fired = true, false
 		}
 	case ui.Release:
@@ -115,8 +88,8 @@ func (b *Button) HandleKey(e *ui.KeyEvent) bool {
 				b.fire()
 			}
 		case b.fired:
-			// A synchronous action is already done, so bring the cursor back.
-			if b.state == idle {
+			// A quick handler is already done, so bring the cursor back.
+			if !b.Busy() && b.state == idle {
 				b.progress.Set(0)
 			}
 		default:
@@ -127,31 +100,35 @@ func (b *Button) HandleKey(e *ui.KeyEvent) bool {
 	return true
 }
 
-func (b *Button) fire() {
-	if b.action != nil {
-		if b.flight.Do(b.action, b.done) {
-			b.state = loading
-			b.label.OffsetY().Set(-b.Rect().H)
-		}
-		return
-	}
-	if b.onClick != nil {
-		b.onClick()
-	}
-}
+func (b *Button) fire() { b.run(clickCall(b.click), b.done) }
 
 func (b *Button) done(err error) {
-	b.state, b.timer = succeeded, 0
-	if err != nil {
+	waited := b.state == loading
+	b.state = idle
+	switch {
+	case err != nil:
 		b.state = failed
-		b.OffsetX().Kick(-260)
+		shake(b)
+	case waited:
+		b.state = succeeded
 	}
-	b.mark = b.state
-	b.result.Jump(0)
-	b.result.Set(1)
+	if b.state == idle {
+		if !b.holding {
+			b.progress.Set(0)
+		}
+	} else {
+		b.timer, b.mark = 0, b.state
+		b.label.OffsetY().Set(-b.Rect().H)
+		b.result.Jump(0)
+		b.result.Set(1)
+	}
+	if b.after != nil {
+		b.after(err)
+	}
 }
 
 func (b *Button) Update(dt float32) {
+	b.tick(dt)
 	if b.holding && !b.fired {
 		p := b.progress.Current() + dt/b.hold
 		if p >= 1 {
@@ -162,9 +139,11 @@ func (b *Button) Update(dt float32) {
 		ui.Invalidate()
 	}
 	switch b.state {
-	case loading:
-		b.timer += dt
-		ui.Invalidate()
+	case idle:
+		if b.Loading() {
+			b.state = loading
+			b.label.OffsetY().Set(-b.Rect().H)
+		}
 	case succeeded, failed:
 		b.timer += dt
 		if b.timer >= resultHold {
@@ -193,11 +172,7 @@ func (b *Button) Draw(c gfx.Canvas) {
 	cx, cy := ui.Round(r.W/2), ui.Round(r.H/2)
 	col := ui.CurrentTheme.Foreground
 	if b.state == loading {
-		for i := int16(-1); i <= 1; i++ {
-			phase := float64(b.timer)*7 - float64(i)*0.8
-			lift := ui.Round(float32(2 * math.Abs(math.Sin(phase))))
-			c.FillCircle(cx+i*5, cy-lift, 1, col)
-		}
+		drawDots(c, cx, cy, b.elapsed, col)
 	}
 	if b.mark != idle && b.result.Get() < 1.99 {
 		y := cy + ui.Round((1-b.result.Get())*r.H)

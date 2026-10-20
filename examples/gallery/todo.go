@@ -9,7 +9,7 @@ import (
 )
 
 // todos is a to-do list made only of stock widgets. The field on top adds a
-// task, OK on a task checks it off, and its Edit button opens a sheet to
+// task, OK on a task checks it off, and its Edit button opens a drawer to
 // rename it or, held, to delete it.
 func todos() ui.Node {
 	t := ui.CurrentTheme
@@ -19,12 +19,14 @@ func todos() ui.Node {
 			widget.TextAlign(0.5)),
 	}
 	add := widget.NewInput("New task")
-	add.SetOnChange(func(s string) {
-		if s == "" {
+	add.OnChange(func(from, to string) {
+		if to == "" {
 			return
 		}
-		tl.add(s)
-		add.SetText("")
+		ui.Do(func() {
+			tl.add(to)
+			add.SetText("")
+		})
 	})
 	ui.Add(tl.list, add, tl.summary)
 	for _, s := range []string{"Clear Blue Zenith", "Charge the battery", "Rewire the SET key"} {
@@ -47,18 +49,20 @@ func (tl *todoList) add(text string) {
 	edit := widget.NewButton("Edit", widget.Font(t.SmallFont))
 	row := ui.NewRow(ui.Gap(2), ui.Cross(ui.CrossCenter), ui.AnimateLayout(),
 		ui.Children(task, edit))
-	task.SetOnChange(func(done bool) {
-		col := t.Foreground
-		if done {
-			col = t.Muted
-			tl.done++
-		} else {
-			tl.done--
-		}
-		task.Title().SetColor(col)
-		tl.refresh()
+	task.OnChange(func(from, done bool) {
+		ui.Do(func() {
+			col := t.Foreground
+			if done {
+				col = t.Muted
+				tl.done++
+			} else {
+				tl.done--
+			}
+			task.Title().SetColor(col)
+			tl.refresh()
+		})
 	})
-	edit.SetOnClick(func() { tl.edit(row, task) })
+	edit.OnClick(func() { ui.Do(func() { tl.edit(row, task) }) })
 	// Before the summary, which stays last.
 	ui.Insert(tl.list, len(tl.list.Column().Children())-1, row)
 	tl.n++
@@ -69,20 +73,24 @@ func (tl *todoList) edit(row ui.Node, task *widget.CheckBox) {
 	d := widget.NewDrawer(widget.Bottom, task.Title().Text(), ui.Gap(2),
 		ui.Padding(ui.LTRB(2, 2, 2, 2)))
 	rename := widget.NewButton("Rename", widget.OnClick(func() {
-		d.Close()
-		textInput().Open(taskTitle{task})
+		ui.Do(func() {
+			d.Close()
+			textInput().Open(taskTitle{task})
+		})
 	}))
 	del := widget.NewButton("Hold to delete", widget.HoldToConfirm(800*time.Millisecond),
 		widget.OnClick(func() {
-			// Closing first hands focus back to this row's Edit button, so
-			// removing the row then moves it to a neighbour.
-			d.Close()
-			if task.Checked() {
-				tl.done--
-			}
-			tl.n--
-			ui.Remove(row)
-			tl.refresh()
+			ui.Do(func() {
+				// Closing first hands focus back to this row's Edit button,
+				// so removing the row then moves it to a neighbour.
+				d.Close()
+				if task.Checked() {
+					tl.done--
+				}
+				tl.n--
+				ui.Remove(row)
+				tl.refresh()
+			})
 		}))
 	ui.Add(d, rename, del)
 	d.Open()
