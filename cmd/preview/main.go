@@ -386,6 +386,17 @@ func highlights() *script {
 
 	s.tap(ui.KeyDown, 0.2)
 	s.tap(ui.KeyOK, 0.5)
+	s.taps(ui.KeyDown, 2, 0.2)
+	s.tap(ui.KeyOK, 0.7)
+	s.tap(ui.KeyBack, 0.5)
+	s.taps(ui.KeyDown, 2, 0.2)
+	s.tap(ui.KeyOK, 0.5)
+	s.tap(ui.KeyRight, 0.3)
+	s.tap(ui.KeyOK, 2)
+	s.tap(ui.KeyBack, 0.5)
+
+	s.tap(ui.KeyDown, 0.2)
+	s.tap(ui.KeyOK, 0.5)
 	s.taps(ui.KeyRight, 2, 0.25)
 	s.tap(ui.KeyOK, 0.4)
 	s.tap(ui.KeyDown, 0.25)
@@ -402,7 +413,7 @@ func highlights() *script {
 	s.tap(ui.KeyOK, 0.6)
 	s.tap(ui.KeyBack, 0.5)
 
-	s.taps(ui.KeyDown, 3, 0.2)
+	s.taps(ui.KeyDown, 4, 0.2)
 	s.tap(ui.KeyOK, 2)
 	// Holding Down runs to the bottom on key repeat and pushes past it.
 	s.emit(ui.KeyDown, ui.Press)
