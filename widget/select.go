@@ -46,7 +46,7 @@ func (s *Select) optionText() string {
 
 func (s *Select) open() {
 	t := ui.CurrentTheme
-	_, sh := ui.Current().Size()
+	_, sh := ui.ScreenSize()
 	header := NewLabel(s.title.Text(), Font(t.SmallFont), ui.Padding(ui.XY(4, 1)))
 	list := NewList()
 	group := NewRadioGroup(s.selected, func(i int) {

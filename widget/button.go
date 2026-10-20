@@ -37,7 +37,7 @@ func (s *SingleFlight) Do(fn func() error, done func(error)) bool {
 	s.busy = true
 	go func() {
 		err := fn()
-		ui.Post(func() {
+		ui.Do(func() {
 			s.busy = false
 			if done != nil {
 				done(err)

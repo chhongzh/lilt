@@ -179,7 +179,7 @@ func (s *Scroll) wave(i int, d float32) {
 
 // focusedChild is the index of the child holding the focus, or -1.
 func (s *Scroll) focusedChild(kids []ui.Node) int {
-	f := ui.Current().Focus.Current()
+	f := ui.Focused()
 	if f == nil {
 		return -1
 	}

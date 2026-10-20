@@ -81,11 +81,10 @@ type event struct {
 // dragSlop is how far a touch may wander before it counts as a drag.
 const dragSlop = 4
 
-// InputManager queues events from any goroutine and dispatches them on the
+// inputManager queues events from any goroutine and dispatches them on the
 // UI goroutine at the start of each frame.
-type InputManager struct {
+type inputManager struct {
 	queue chan event
-	subs  []func(*KeyEvent) bool
 	owner [keyCount]Node
 	// nav marks keys the framework took on Press: arrows for focus
 	// movement and Back for the screen stack.
@@ -100,40 +99,48 @@ type InputManager struct {
 	ptrCapture PointerHandler
 }
 
-func (m *InputManager) init() {
+func (m *inputManager) init() {
 	m.queue = make(chan event, 32)
 	m.path = make([]Node, 0, 32)
 }
 
+// reset forgets held keys, the pointer and anything still queued.
+func (m *inputManager) reset() {
+	for {
+		select {
+		case <-m.queue:
+			continue
+		default:
+		}
+		break
+	}
+	m.owner, m.nav, m.repeated = [keyCount]Node{}, [keyCount]bool{}, [keyCount]bool{}
+	m.ptrDown, m.ptrHit, m.ptrPressed, m.ptrCapture = false, nil, nil, nil
+}
+
 // Emit queues a key event. Safe to call from any goroutine.
-func (m *InputManager) Emit(k Key, p Phase) { m.push(event{key: KeyEvent{Key: k, Phase: p}}) }
+func (m *inputManager) Emit(k Key, p Phase) { m.push(event{key: KeyEvent{Key: k, Phase: p}}) }
 
 // EmitRune queues a typed character.
-func (m *InputManager) EmitRune(r rune) {
+func (m *inputManager) EmitRune(r rune) {
 	m.push(event{key: KeyEvent{Key: KeyChar, Phase: Press, Rune: r}})
 }
 
 // EmitPointer queues a touch or mouse event in screen pixels.
-func (m *InputManager) EmitPointer(x, y int16, p PointerPhase) {
+func (m *inputManager) EmitPointer(x, y int16, p PointerPhase) {
 	m.push(event{ptr: PointerEvent{x, y, p}, pointer: true})
 }
 
 // push drops the event when the queue is full: a stalled UI must not block
 // the goroutine polling the buttons.
-func (m *InputManager) push(e event) {
+func (m *inputManager) push(e event) {
 	select {
 	case m.queue <- e:
 	default:
 	}
 }
 
-// Subscribe registers a global handler that sees every key before the tree.
-// Returning true consumes the event.
-func (m *InputManager) Subscribe(fn func(*KeyEvent) bool) {
-	m.subs = append(m.subs, fn)
-}
-
-func (m *InputManager) drain() bool {
+func (m *inputManager) drain() bool {
 	any := false
 	for {
 		select {
@@ -150,13 +157,12 @@ func (m *InputManager) drain() bool {
 	}
 }
 
-func (m *InputManager) dispatch(e KeyEvent) {
-	a := app
+func (m *inputManager) dispatch(e KeyEvent) {
 	if e.Key == KeyOK {
-		a.Cursor.pressed(e.Phase)
+		cursor.pressed(e.Phase)
 	}
 	if e.Key.Arrow() {
-		a.Cursor.hasPointer = false
+		cursor.hasPointer = false
 	}
 	switch e.Phase {
 	case Press:
@@ -165,11 +171,6 @@ func (m *InputManager) dispatch(e KeyEvent) {
 		m.repeated[e.Key] = true
 	case Release:
 		e.Repeated = m.repeated[e.Key]
-	}
-	for _, fn := range m.subs {
-		if fn(&e) {
-			return
-		}
 	}
 	if e.Phase != Press {
 		if o := m.owner[e.Key]; o != nil {
@@ -191,7 +192,7 @@ func (m *InputManager) dispatch(e KeyEvent) {
 		}
 	}
 	m.path = m.path[:0]
-	for n := a.Focus.current; n != nil; n = n.box().parent {
+	for n := focus.current; n != nil; n = n.box().parent {
 		m.path = append(m.path, n)
 	}
 	for i := len(m.path) - 1; i >= 0; i-- {
@@ -213,15 +214,15 @@ func (m *InputManager) dispatch(e KeyEvent) {
 }
 
 // unclaimed runs the framework's own behaviour for keys no node took.
-func (m *InputManager) unclaimed(e *KeyEvent) {
+func (m *inputManager) unclaimed(e *KeyEvent) {
 	if e.Key == KeyBack {
-		app.Screens.back(e)
+		screens.back(e)
 	} else {
-		app.navigate(e)
+		navigate(e)
 	}
 }
 
-func (m *InputManager) claim(e KeyEvent, n Node) {
+func (m *inputManager) claim(e KeyEvent, n Node) {
 	if e.Phase == Press {
 		m.owner[e.Key] = n
 	}
@@ -237,7 +238,7 @@ func deliver(n Node, e *KeyEvent) {
 }
 
 // forget drops every reference into a subtree that is leaving the tree.
-func (m *InputManager) forget(d Node) {
+func (m *inputManager) forget(d Node) {
 	for k, o := range m.owner {
 		if o != nil && IsAncestor(d, o) {
 			m.owner[k] = nil
@@ -248,28 +249,27 @@ func (m *InputManager) forget(d Node) {
 	}
 }
 
-func (m *InputManager) pointer(e PointerEvent) {
-	a := app
+func (m *inputManager) pointer(e PointerEvent) {
 	switch e.Phase {
 	case PointerDown:
 		m.ptrDown, m.ptrStart, m.ptrCapture = true, e, nil
-		m.ptrHit = a.hitTest(e.X, e.Y)
-		a.Cursor.pointerAt(e.X, e.Y)
+		m.ptrHit = hitTest(e.X, e.Y)
+		cursor.pointerAt(e.X, e.Y)
 		m.offer(&e)
 		if t := focusableAncestor(m.ptrHit); t != nil {
-			a.Focus.Set(t)
+			focus.Set(t)
 			m.ptrPressed = t
 			m.dispatch(KeyEvent{Key: KeyOK, Phase: Press})
 		}
 	case PointerMove:
-		a.Cursor.pointerAt(e.X, e.Y)
+		cursor.pointerAt(e.X, e.Y)
 		if m.ptrCapture != nil {
 			m.ptrCapture.HandlePointer(&e)
 			return
 		}
 		if !m.ptrDown {
-			if t := focusableAncestor(a.hitTest(e.X, e.Y)); t != nil {
-				a.Focus.Set(t)
+			if t := focusableAncestor(hitTest(e.X, e.Y)); t != nil {
+				focus.Set(t)
 			}
 			return
 		}
@@ -296,7 +296,7 @@ func (m *InputManager) pointer(e PointerEvent) {
 	}
 }
 
-func (m *InputManager) offer(e *PointerEvent) PointerHandler {
+func (m *inputManager) offer(e *PointerEvent) PointerHandler {
 	for n := m.ptrHit; n != nil; n = n.box().parent {
 		if h, ok := n.(PointerHandler); ok && h.HandlePointer(e) {
 			return h

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sync/atomic"
+
 	"github.com/chhongzh/lilt/anim"
 	"github.com/chhongzh/lilt/gfx"
 	"github.com/chhongzh/lilt/ui"
@@ -23,13 +25,13 @@ const (
 // lights keys the page itself has no use for.
 type keypad struct {
 	ui.Box
-	held  *[padCount]bool
+	held  *[padCount]atomic.Bool
 	gpio  *[padCount]string
 	shown [padCount]bool
 	fill  [padCount]anim.Value
 }
 
-func newKeypad(held *[padCount]bool, gpio *[padCount]string) *keypad {
+func newKeypad(held *[padCount]atomic.Bool, gpio *[padCount]string) *keypad {
 	k := &keypad{held: held, gpio: gpio}
 	for i := range k.fill {
 		k.fill[i].SetSpring(anim.Snappy)
@@ -43,7 +45,8 @@ func (k *keypad) Leaf() {}
 func (k *keypad) Measure(max ui.Vec2) ui.Vec2 { return max }
 
 func (k *keypad) Update(float32) {
-	for i, down := range k.held {
+	for i := range k.held {
+		down := k.held[i].Load()
 		if down == k.shown[i] {
 			continue
 		}

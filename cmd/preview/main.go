@@ -1,7 +1,8 @@
 // Command preview runs the gallery on the host against a scripted key
 // timeline and writes an animated GIF of the session plus a PNG contact
-// sheet of marked moments. It runs in real time so background actions,
-// which sleep on the wall clock, finish in step with the frames.
+// sheet of marked moments. It steps frames itself instead of calling
+// lilt.Start, but in real time, so callbacks, which run on their own
+// goroutines and sleep on the wall clock, finish in step with the frames.
 package main
 
 import (
@@ -17,6 +18,7 @@ import (
 
 	"github.com/chhongzh/lilt/examples/gallery"
 	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/internal/core"
 	"github.com/chhongzh/lilt/ui"
 )
 
@@ -367,8 +369,7 @@ func main() {
 	}
 
 	scr := &screen{}
-	app := ui.NewApp(scr)
-	gallery.Build()
+	core.Boot(scr, gallery.Home())
 	sc, name := timeline(), "session.gif"
 	if *reel {
 		sc, name = highlights(), "highlight.gif"
@@ -394,11 +395,11 @@ func main() {
 				shots = append(shots, scr.image(3))
 				names = append(names, st.shot)
 			} else {
-				app.Input.Emit(st.key, st.phase)
+				ui.Emit(st.key, st.phase)
 			}
 			next++
 		}
-		if _, err := app.Frame(dt); err != nil {
+		if _, err := core.Frame(dt); err != nil {
 			fail(err)
 		}
 		if frame%gifEvery == 0 {

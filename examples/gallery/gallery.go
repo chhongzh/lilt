@@ -17,9 +17,9 @@ type Demo struct {
 	Build func() ui.Node
 }
 
-// Build pushes the gallery's home screen onto the current app. Extra demos,
-// such as board-specific pages, are listed before the standard ones.
-func Build(extra ...Demo) {
+// Home builds the gallery's home screen. Extra demos, such as board-specific
+// pages, are listed before the standard ones.
+func Home(extra ...Demo) ui.Node {
 	home := widget.NewList()
 	for _, d := range append(extra, demos...) {
 		build := d.Build
@@ -27,7 +27,7 @@ func Build(extra ...Demo) {
 			ui.Push(build(), ui.SlideLeft)
 		})))
 	}
-	ui.Push(Page("Gallery", home), ui.SlideLeft)
+	return Page("Gallery", home)
 }
 
 var demos = []Demo{

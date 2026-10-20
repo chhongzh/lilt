@@ -1,10 +1,11 @@
 package ui
 
 import (
-	"time"
+	"sync"
 
 	"github.com/chhongzh/lilt/anim"
 	"github.com/chhongzh/lilt/gfx"
+	"github.com/chhongzh/lilt/internal/core"
 )
 
 // TextTarget is a field the system keyboard edits.
@@ -17,97 +18,94 @@ type TextTarget interface {
 // on-screen keyboard; boards with a real keyboard can supply their own.
 type TextInputMethod interface{ Open(t TextTarget) }
 
-// App owns the screen, the node tree and the frame loop. There is one per
-// program; NewApp makes it the current one.
-type App struct {
-	Screens   ScreenStack
-	Input     InputManager
-	Focus     FocusManager
-	Cursor    Cursor
-	TextInput TextInputMethod
-	// FPS caps the frame rate of Run.
-	FPS int
+// TextInput is the editor Input opens; nil means the widget package's
+// soft keyboard.
+var TextInput TextInputMethod
 
-	screen gfx.Screen
-	root   *Stack
-	posts  chan func()
-	w, h   int16
+// The UI is a singleton: one screen, one tree, one of each manager.
+var (
+	screen     gfx.Screen
+	scrW, scrH int16
+	root       = &Stack{}
+
+	screens screenStack
+	focus   focusManager
+	input   inputManager
+	cursor  Cursor
+
+	// frameMu is held for the whole of each frame; Do takes it between frames.
+	frameMu sync.Mutex
+)
+
+func init() {
+	input.init()
+	cursor.init()
+	core.Boot = boot
+	core.Frame = frame
+	core.Reset = reset
 }
 
-var app *App
-
-// NewApp creates the app drawing to s and makes it current.
-func NewApp(s gfx.Screen) *App {
-	w, h := s.Size()
-	a := &App{screen: s, w: w, h: h, FPS: 60, posts: make(chan func(), 32)}
-	app = a
-	a.Input.init()
-	a.Cursor.init()
-	a.root = &Stack{}
-	a.root.width, a.root.height = Px(float32(w)), Px(float32(h))
+func boot(s gfx.Screen, first any) {
+	screen = s
+	scrW, scrH = s.Size()
+	root.width, root.height = Px(float32(scrW)), Px(float32(scrH))
 	Relayout()
-	return a
+	if n, ok := first.(Node); ok && n != nil {
+		Push(n, SlideLeft)
+	}
 }
 
-// Current returns the app created last.
-func Current() *App { return app }
-
-func (a *App) Size() (w, h int16) { return a.w, a.h }
-
-// Frame advances the UI by dt seconds and redraws if anything changed. It
-// reports whether the screen was flushed.
-func (a *App) Frame(dt float32) (bool, error) {
-	for done := false; !done; {
-		select {
-		case fn := <-a.posts:
-			fn()
-		default:
-			done = true
-		}
+func reset() {
+	frameMu.Lock()
+	defer frameMu.Unlock()
+	for len(screens.hosts) > 0 {
+		h := screens.hosts[len(screens.hosts)-1]
+		screens.hosts = screens.hosts[:len(screens.hosts)-1]
+		Remove(h)
 	}
-	if a.Input.drain() {
+	focus.Set(nil)
+	input.reset()
+	cursor.has = false
+}
+
+// Do runs fn between frames, so code on other goroutines can change the
+// tree. Event callbacks run off the UI goroutine and must wrap their UI
+// changes in Do. fn must not call Do.
+func Do(fn func()) {
+	frameMu.Lock()
+	defer frameMu.Unlock()
+	fn()
+}
+
+// ScreenSize is the size of the bound screen in pixels.
+func ScreenSize() (w, h int16) { return scrW, scrH }
+
+func frame(dt float32) (bool, error) {
+	frameMu.Lock()
+	defer frameMu.Unlock()
+	if input.drain() {
 		Invalidate()
 	}
-	update(a.root, dt)
-	a.Screens.update()
+	update(root, dt)
+	screens.update()
 	if anim.Step(dt) {
 		Invalidate()
 	}
 	if needsLayout {
 		needsLayout = false
-		Arrange(a.root, Rect{0, 0, float32(a.w), float32(a.h)})
-		a.Screens.focusFirst()
+		Arrange(root, Rect{0, 0, float32(scrW), float32(scrH)})
+		screens.focusFirst()
 	}
-	a.Cursor.update()
+	cursor.update()
 	if !needsDraw {
 		return false, nil
 	}
 	needsDraw = false
-	c := gfx.NewCanvas(a.screen)
-	c.FillRect(gfx.Rect{W: a.w, H: a.h}, CurrentTheme.Background)
-	paint(a.root, c)
-	a.Cursor.draw(c)
-	return true, a.screen.Flush()
-}
-
-// Run calls Frame forever at up to FPS frames per second.
-func (a *App) Run() error {
-	last := time.Now()
-	for {
-		period := time.Second / time.Duration(a.FPS)
-		now := time.Now()
-		dt := min(float32(now.Sub(last).Seconds()), 0.1)
-		last = now
-		if _, err := a.Frame(dt); err != nil {
-			return err
-		}
-		if spent := time.Since(now); spent < period {
-			time.Sleep(period - spent)
-		} else {
-			// Still yield so polling goroutines get to run.
-			time.Sleep(0)
-		}
-	}
+	c := gfx.NewCanvas(screen)
+	c.FillRect(gfx.Rect{W: scrW, H: scrH}, CurrentTheme.Background)
+	paint(root, c)
+	cursor.draw(c)
+	return true, screen.Flush()
 }
 
 func update(d Node, dt float32) {
@@ -155,8 +153,8 @@ func paint(d Node, c gfx.Canvas) {
 }
 
 // hitTest finds the deepest visible node under a screen point in the top screen.
-func (a *App) hitTest(x, y int16) Node {
-	s := a.Screens.scope()
+func hitTest(x, y int16) Node {
+	s := screens.scope()
 	if s == nil {
 		return nil
 	}
@@ -186,18 +184,24 @@ func hit(d Node, x, y, ox, oy int16) Node {
 	return nil
 }
 
-// Post runs fn on the UI goroutine at the start of the next frame. Use it to
-// hand results from other goroutines back to widgets.
-func Post(fn func()) { app.posts <- fn }
-
 // Push shows d as a new screen.
-func Push(d Node, t Transition) { app.Screens.Push(d, t) }
+func Push(d Node, t Transition) { screens.Push(d, t) }
 
 // Pop dismisses the top screen.
-func Pop() bool { return app.Screens.Pop() }
+func Pop() bool { return screens.Pop() }
 
 // SetFocus moves focus to d.
-func SetFocus(d Node) { app.Focus.Set(d) }
+func SetFocus(d Node) { focus.Set(d) }
 
 // Focused returns the focused node, or nil.
-func Focused() Node { return app.Focus.current }
+func Focused() Node { return focus.current }
+
+// Emit queues a key event. Safe to call from any goroutine.
+func Emit(k Key, p Phase) { input.Emit(k, p) }
+
+// EmitRune queues a typed character. Safe to call from any goroutine.
+func EmitRune(r rune) { input.EmitRune(r) }
+
+// EmitPointer queues a touch or mouse event in screen pixels. Safe to call
+// from any goroutine.
+func EmitPointer(x, y int16, p PointerPhase) { input.EmitPointer(x, y, p) }

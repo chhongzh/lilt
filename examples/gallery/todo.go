@@ -113,7 +113,7 @@ func (tt taskTitle) SetText(s string) {
 
 // textInput is the editor Input would open: the app's, or the soft keyboard.
 func textInput() ui.TextInputMethod {
-	if m := ui.Current().TextInput; m != nil {
+	if m := ui.TextInput; m != nil {
 		return m
 	}
 	return widget.Keyboard

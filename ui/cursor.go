@@ -76,7 +76,7 @@ func (c *Cursor) pointerAt(x, y int16) {
 }
 
 func (c *Cursor) update() {
-	f := app.Focus.current
+	f := focus.current
 	if f == nil || !shown(f) {
 		if c.has {
 			c.has = false
@@ -166,7 +166,7 @@ func screenRect(d Node) (Rect, bool) {
 	x, y := pixelOrigin(d)
 	p := pixelRect(d.box())
 	own := gfx.Rect{X: x, Y: y, W: p.W, H: p.H}
-	vis := own.Intersect(gfx.Rect{W: app.w, H: app.h})
+	vis := own.Intersect(gfx.Rect{W: scrW, H: scrH})
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		b := n.box()
 		if b.flags&flagClip == 0 {

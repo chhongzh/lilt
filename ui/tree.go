@@ -41,10 +41,8 @@ func Remove(d Node) {
 	if p == nil {
 		return
 	}
-	if app != nil {
-		app.Focus.leaving(b)
-		app.Input.forget(d)
-	}
+	focus.leaving(b)
+	input.forget(d)
 	pb := p.box()
 	for i, c := range pb.children {
 		if c.box() == b {
@@ -92,8 +90,5 @@ func IsAncestor(a, d Node) bool {
 
 // Attached reports whether d is in the live tree.
 func Attached(d Node) bool {
-	if app == nil {
-		return false
-	}
-	return IsAncestor(app.root, d)
+	return IsAncestor(root, d)
 }

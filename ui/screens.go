@@ -70,23 +70,23 @@ const (
 	backNudge = 6
 )
 
-// ScreenStack is the navigation stack. Only the top screen receives focus
+// screenStack is the navigation stack. Only the top screen receives focus
 // and pointer input; screens fully covered by an opaque screen are hidden.
-type ScreenStack struct {
+type screenStack struct {
 	hosts        []*screenHost
 	focusPending bool
 }
 
 // Push shows d above the current screen.
-func (s *ScreenStack) Push(d Node, t Transition) {
-	w, h := float32(app.w), float32(app.h)
+func (s *screenStack) Push(d Node, t Transition) {
+	w, h := float32(scrW), float32(scrH)
 	host := &screenHost{content: d, transition: t}
 	host.width, host.height = Rel(1), Rel(1)
 	host.offsetX.SetSpring(anim.Smooth)
 	host.offsetY.SetSpring(anim.Smooth)
 	Attach(host, d)
 	if top := s.top(); top != nil {
-		top.focus = app.Focus.current
+		top.focus = focus.current
 		if t == SlideLeft {
 			top.offsetX.Set(-w / 3)
 			host.offsetX.Jump(w)
@@ -95,16 +95,16 @@ func (s *ScreenStack) Push(d Node, t Transition) {
 		}
 		host.offsetX.Set(0)
 		host.offsetY.Set(0)
-		app.Cursor.Leap()
+		cursor.Leap()
 	}
 	s.hosts = append(s.hosts, host)
-	Attach(app.root, host)
-	app.Focus.Set(nil)
+	Attach(root, host)
+	focus.Set(nil)
 	s.focusPending = true
 }
 
 // Pop dismisses the top screen. The root screen cannot be popped.
-func (s *ScreenStack) Pop() bool {
+func (s *screenStack) Pop() bool {
 	top := s.top()
 	prev := s.below(top)
 	if prev == nil {
@@ -112,15 +112,15 @@ func (s *ScreenStack) Pop() bool {
 	}
 	top.exiting = true
 	if top.transition == SlideLeft {
-		top.offsetX.Set(float32(app.w))
+		top.offsetX.Set(float32(scrW))
 		prev.offsetX.Set(0)
 	} else {
 		top.offsetY.Set(top.content.box().rect.H + 2)
 	}
 	prev.SetVisible(true)
-	app.Cursor.Leap()
-	app.Focus.Set(nil)
-	app.Focus.Set(prev.focus)
+	cursor.Leap()
+	focus.Set(nil)
+	focus.Set(prev.focus)
 	s.focusPending = true
 	return true
 }
@@ -128,7 +128,7 @@ func (s *ScreenStack) Pop() bool {
 // back handles a Back key nothing else claimed. Pressing peeks the top
 // screen aside as if starting to dismiss it, and the cursor leans with it;
 // releasing dismisses it. The root screen bounces back instead.
-func (s *ScreenStack) back(e *KeyEvent) {
+func (s *screenStack) back(e *KeyEvent) {
 	top := s.top()
 	if top == nil {
 		return
@@ -141,23 +141,23 @@ func (s *ScreenStack) back(e *KeyEvent) {
 	case Press:
 		top.peek(d)
 		if top.transition == Sheet {
-			app.Cursor.Lean(0, d)
+			cursor.Lean(0, d)
 		} else {
-			app.Cursor.Lean(d, 0)
+			cursor.Lean(d, 0)
 		}
 	case Release:
-		app.Cursor.Lean(0, 0)
+		cursor.Lean(0, 0)
 		top.peek(0)
 		if e.Canceled || s.Pop() {
 			return
 		}
 		top.offsetX.Bump(backNudge)
-		app.Cursor.Nudge(backNudge)
+		cursor.Nudge(backNudge)
 	}
 }
 
 // Top returns the content of the top screen, or nil.
-func (s *ScreenStack) Top() Node {
+func (s *screenStack) Top() Node {
 	if t := s.top(); t != nil {
 		return t.content
 	}
@@ -165,7 +165,7 @@ func (s *ScreenStack) Top() Node {
 }
 
 // Len counts screens, not including ones still animating out.
-func (s *ScreenStack) Len() int {
+func (s *screenStack) Len() int {
 	n := 0
 	for _, h := range s.hosts {
 		if !h.exiting {
@@ -175,7 +175,7 @@ func (s *ScreenStack) Len() int {
 	return n
 }
 
-func (s *ScreenStack) top() *screenHost {
+func (s *screenStack) top() *screenHost {
 	for i := len(s.hosts) - 1; i >= 0; i-- {
 		if !s.hosts[i].exiting {
 			return s.hosts[i]
@@ -184,7 +184,7 @@ func (s *ScreenStack) top() *screenHost {
 	return nil
 }
 
-func (s *ScreenStack) below(h *screenHost) *screenHost {
+func (s *screenStack) below(h *screenHost) *screenHost {
 	if h == nil {
 		return nil
 	}
@@ -201,14 +201,14 @@ func (s *ScreenStack) below(h *screenHost) *screenHost {
 }
 
 // scope is the subtree that focus and pointer input are confined to.
-func (s *ScreenStack) scope() Node {
+func (s *screenStack) scope() Node {
 	if t := s.top(); t != nil {
 		return t
 	}
 	return nil
 }
 
-func (s *ScreenStack) update() {
+func (s *screenStack) update() {
 	for i := 0; i < len(s.hosts); {
 		h := s.hosts[i]
 		if h.exiting && h.settled() {
@@ -224,7 +224,7 @@ func (s *ScreenStack) update() {
 	// part of the width, so screens are stacked until their resting spans
 	// close over the whole screen.
 	cover := -1
-	w := float32(app.w)
+	w := float32(scrW)
 	var lo, hi float32
 	for i := len(s.hosts) - 1; i >= 0; i-- {
 		h := s.hosts[i]
@@ -251,16 +251,16 @@ func (s *ScreenStack) update() {
 // focusFirst runs after the first layout of a new screen, so revealing the
 // focused node sees real rects. A node focused right after Push is kept and
 // revealed again.
-func (s *ScreenStack) focusFirst() {
+func (s *screenStack) focusFirst() {
 	if !s.focusPending {
 		return
 	}
 	s.focusPending = false
-	if cur := app.Focus.current; cur != nil {
+	if cur := focus.current; cur != nil {
 		reveal(cur)
 		return
 	}
 	if sc := s.scope(); sc != nil {
-		app.Focus.Set(FirstFocusable(sc))
+		focus.Set(FirstFocusable(sc))
 	}
 }

@@ -62,7 +62,7 @@ func (in *Input) HandleKey(e *ui.KeyEvent) bool {
 	switch e.Key {
 	case ui.KeyOK:
 		if e.Phase == ui.Release && !e.Canceled {
-			m := ui.Current().TextInput
+			m := ui.TextInput
 			if m == nil {
 				m = Keyboard
 			}

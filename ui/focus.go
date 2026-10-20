@@ -15,15 +15,13 @@ type ArrowScroller interface {
 // Revealer is told when a descendant gains focus so it can scroll it into view.
 type Revealer interface{ Reveal(d Node) }
 
-// FocusManager tracks the single focused node.
-type FocusManager struct {
+// focusManager tracks the single focused node.
+type focusManager struct {
 	current Node
 }
 
-func (f *FocusManager) Current() Node { return f.current }
-
 // Set focuses d, or clears focus for nil. Hidden or unfocusable nodes are ignored.
-func (f *FocusManager) Set(d Node) {
+func (f *focusManager) Set(d Node) {
 	if d != nil && (!d.box().Focusable() || !shown(d)) {
 		return
 	}
@@ -53,12 +51,12 @@ func reveal(d Node) {
 }
 
 // leaving moves focus out of b before b is removed or hidden.
-func (f *FocusManager) leaving(b *Box) {
+func (f *focusManager) leaving(b *Box) {
 	if f.current == nil || !IsAncestor(b, f.current) {
 		return
 	}
 	var next Node
-	if scope := app.Screens.scope(); scope != nil {
+	if scope := screens.scope(); scope != nil {
 		fd := finder{dir: KeyNone, src: restRect(f.current), from: f.current.box(), exclude: b}
 		fd.walk(scope)
 		next = fd.best
@@ -273,22 +271,22 @@ const leanDist = 2
 // navigate moves focus with the arrows. Like every key, pressing only gives
 // feedback, the cursor leaning toward the key; the move happens on release,
 // or on each repeat while the key is held.
-func (a *App) navigate(e *KeyEvent) {
+func navigate(e *KeyEvent) {
 	dx, dy := arrowDir(e.Key)
 	switch e.Phase {
 	case Press:
-		a.Cursor.Lean(dx*leanDist, dy*leanDist)
+		cursor.Lean(dx*leanDist, dy*leanDist)
 	case Release:
-		a.Cursor.Lean(0, 0)
+		cursor.Lean(0, 0)
 	}
-	scope := a.Screens.scope()
-	cur := a.Focus.current
+	scope := screens.scope()
+	cur := focus.current
 	if scope == nil {
 		return
 	}
 	if cur == nil {
 		if e.Fires() {
-			a.Focus.Set(FirstFocusable(scope))
+			focus.Set(FirstFocusable(scope))
 		}
 		return
 	}
@@ -298,13 +296,13 @@ func (a *App) navigate(e *KeyEvent) {
 			if e.Phase == Press {
 				// The scroll view pulled its rows; the cursor rides along
 				// with the focused one instead of leaning away from it.
-				a.Cursor.Lean(0, 0)
+				cursor.Lean(0, 0)
 			}
 			return
 		}
 	}
 	if next != nil && e.Fires() {
-		a.Focus.Set(next)
+		focus.Set(next)
 	}
 }
 

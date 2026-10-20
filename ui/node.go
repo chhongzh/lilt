@@ -178,8 +178,8 @@ func (b *Box) SetVisible(v bool) {
 	}
 	b.set(flagHidden, !v)
 	Relayout()
-	if !v && app != nil {
-		app.Focus.leaving(b)
+	if !v {
+		focus.leaving(b)
 	}
 }
 
@@ -187,8 +187,8 @@ func (b *Box) Focusable() bool { return b.flags&flagFocusable != 0 }
 
 func (b *Box) SetFocusable(f bool) {
 	b.set(flagFocusable, f)
-	if !f && app != nil {
-		app.Focus.leaving(b)
+	if !f {
+		focus.leaving(b)
 	}
 }
 
