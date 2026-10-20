@@ -39,6 +39,7 @@ var demos = []Demo{
 	{"Flex", flex},
 	{"Grid", grid},
 	{"Scroll", scrolls},
+	{"Nested", nested},
 	{"Input", inputs},
 	{"Todo", todos},
 	{"Long text", longText},
@@ -276,6 +277,48 @@ func scrolls() ui.Node {
 			ui.FillWidth(), ui.Padding(ui.LTRB(0, 0, 0, 3))))
 	}
 	return Page("Scroll", ui.NewColumn(ui.Children(playing, l)))
+}
+
+// nested puts scrolls inside a scrolling page: a short framed list that
+// scrolls on its own, a shelf that scrolls sideways and a grid that scrolls
+// both ways. At the end of an inner scroll the keys pass to the page.
+func nested() ui.Node {
+	t := ui.CurrentTheme
+	small := widget.Font(t.SmallFont)
+	picked := widget.NewLabel("Pick a cell", small, ui.Padding(t.RowPadding))
+
+	inbox := widget.NewList(ui.Height(ui.Px(40)), ui.Border(t.Foreground), ui.Radius(t.Radius),
+		ui.Margin(ui.XY(2, 0)), ui.Padding(ui.LTRB(1, 1, 3, 1)))
+	for i := 1; i <= 8; i++ {
+		ui.Add(inbox, widget.NewListItem("Message "+strconv.Itoa(i), small))
+	}
+
+	shelf := ui.NewRow(ui.Gap(t.Gap), ui.Padding(ui.XY(2, 1)))
+	for _, s := range []string{"HD", "HR", "DT", "FL", "NF", "EZ", "SO", "PF"} {
+		ui.Add(shelf, widget.NewButton(s, small, ui.Padding(ui.XY(5, 1))))
+	}
+
+	// A board of cells too wide and too tall for the screen.
+	board := ui.NewGrid(ui.Gap(t.Gap), ui.Padding(ui.All(2)),
+		ui.Columns(ui.Fixed(28), ui.Fixed(28), ui.Fixed(28), ui.Fixed(28), ui.Fixed(28), ui.Fixed(28)))
+	for r := 'A'; r <= 'F'; r++ {
+		for c := 1; c <= 6; c++ {
+			cell := string(r) + strconv.Itoa(c)
+			ui.Add(board, widget.NewButton(cell, small, ui.Padding(ui.XY(1, 1)),
+				widget.OnClick(func() { ui.Do(func() { picked.SetText("Picked " + cell) }) })))
+		}
+	}
+
+	l := widget.NewList(ui.Grow(1))
+	ui.Add(l,
+		caption("Inbox"), inbox,
+		caption("Shelf"), widget.NewScroll(shelf, widget.ScrollHorizontal, ui.FillWidth(),
+			ui.Padding(ui.LTRB(0, 0, 0, 3))),
+		caption("Board"), widget.NewScroll(board, widget.ScrollBoth, ui.FillWidth(),
+			ui.Height(ui.Px(44)), ui.Padding(ui.LTRB(0, 0, 3, 3))),
+		widget.NewListItem("Below the board"),
+	)
+	return Page("Nested", ui.NewColumn(ui.Children(picked, l)))
 }
 
 func inputs() ui.Node {

@@ -264,7 +264,7 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Node) bool {
 		s.apply()
 	}
 	if !e.Fires() {
-		if e.Phase == ui.Press && next == nil && s.room(i, sign) <= 0.5 {
+		if e.Phase == ui.Press && next == nil && s.room(i, sign) <= 0.5 && !s.outerRoom(i, sign) {
 			s.pull[i] = -sign * scrollStep
 			s.apply()
 			return true
@@ -291,7 +291,7 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Node) bool {
 		s.apply()
 		return true
 	}
-	if next != nil {
+	if next != nil || s.outerRoom(i, sign) {
 		return false
 	}
 	s.pull[i] -= sign * scrollStep
@@ -305,6 +305,22 @@ func (s *Scroll) alongside(d ui.Node, i int) bool {
 	lo, size := span(ui.RestRect(s), 1-i)
 	dlo, dsize := span(ui.RestRect(d), 1-i)
 	return dlo < lo+size && lo < dlo+dsize
+}
+
+func (s *Scroll) scrollView() *Scroll { return s }
+
+// outerRoom reports whether a scroll around s can still move along axis i
+// toward sign. s then leaves the key at its own end to that one, so nested
+// scrolls hand over instead of rubber-banding.
+func (s *Scroll) outerRoom(i int, sign float32) bool {
+	for n := s.Parent(); n != nil; n = ui.BoxOf(n).Parent() {
+		if o, ok := n.(interface{ scrollView() *Scroll }); ok {
+			if v := o.scrollView(); v.on(i) && v.room(i, sign) > 0.5 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // room is how far the content can still scroll along axis i toward sign.
