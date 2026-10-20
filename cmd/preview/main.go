@@ -154,7 +154,11 @@ func timeline() *script {
 	s.tap(ui.KeyOK, 1.2)
 	s.shot("failed")
 	s.wait(1.5)
-	s.tap(ui.KeyBack, 0.6)
+	s.emit(ui.KeyBack, ui.Press)
+	s.wait(0.8)
+	s.shot("back held")
+	s.emit(ui.KeyBack, ui.Release)
+	s.wait(0.6)
 
 	s.tap(ui.KeyDown, 0.3)
 	s.tap(ui.KeyOK, 0.6)

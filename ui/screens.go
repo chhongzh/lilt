@@ -220,10 +220,25 @@ func (s *ScreenStack) update() {
 		}
 		i++
 	}
+	// A screen held aside by Back or parked a third to the left covers only
+	// part of the width, so screens are stacked until their resting spans
+	// close over the whole screen.
 	cover := -1
+	w := float32(app.w)
+	var lo, hi float32
 	for i := len(s.hosts) - 1; i >= 0; i-- {
 		h := s.hosts[i]
-		if !h.exiting && h.opaque() && h.settled() {
+		if h.exiting || !h.opaque() || !h.settled() || h.offsetY.Target() != 0 {
+			continue
+		}
+		x := h.offsetX.Target()
+		switch {
+		case lo == hi:
+			lo, hi = x, x+w
+		case x <= hi && x+w >= lo:
+			lo, hi = min(lo, x), max(hi, x+w)
+		}
+		if lo <= 0 && hi >= w {
 			cover = i
 			break
 		}
