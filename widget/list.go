@@ -120,8 +120,7 @@ func (li *ListItem) DrawOver(c gfx.Canvas) {
 	if !li.waiting {
 		return
 	}
-	r := li.Rect()
-	p := li.Padding()
-	x := ui.Round(r.W - p.Right*ui.Unit() - 9*ui.Unit())
-	drawWaiting(c, x, ui.Round(r.H/2), li.elapsed)
+	r := li.ContentRect()
+	x := ui.Round(r.Right() - 9*ui.Unit())
+	drawWaiting(c, x, ui.Round(r.Center().Y), li.elapsed)
 }

@@ -79,7 +79,7 @@ func (l *layer) place(r Rect) Rect {
 		}
 		return Rect{r.Right() - w, r.Y, w, r.H}
 	}
-	const m = popupMargin
+	m := popupMargin * Unit()
 	room := Vec2{r.W - 2*m, r.H - 2*m}
 	s := Measure(l.content, room)
 	w, h := min(s.X, room.X), min(s.Y, room.Y)
@@ -128,7 +128,7 @@ func (l *layer) Draw(c gfx.Canvas) {
 		return
 	}
 	r := l.content.box().rect.Pixels()
-	rad := t.Radius
+	rad := radiusPx(t.Radius)
 	if l.kind <= DrawerRight {
 		// A drawer's frame runs past its edge, so only the inner corners show.
 		rad *= 2

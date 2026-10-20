@@ -33,6 +33,7 @@ func Measure(d Node, max Vec2) Vec2 {
 	w, autoW := resolve(b.width, max.X)
 	h, autoH := resolve(b.height, max.Y)
 	if autoW || autoH {
+		p := padPx(b)
 		inner := Vec2{max.X, max.Y}
 		if !autoW {
 			inner.X = w
@@ -40,14 +41,14 @@ func Measure(d Node, max Vec2) Vec2 {
 		if !autoH {
 			inner.Y = h
 		}
-		inner.X -= b.padding.Horizontal()
-		inner.Y -= b.padding.Vertical()
+		inner.X -= p.Horizontal()
+		inner.Y -= p.Vertical()
 		c := contentSize(d, inner)
 		if autoW {
-			w = c.X + b.padding.Horizontal()
+			w = c.X + p.Horizontal()
 		}
 		if autoH {
-			h = c.Y + b.padding.Vertical()
+			h = c.Y + p.Vertical()
 		}
 	}
 	return Vec2{w, h}
@@ -66,9 +67,10 @@ func contentSize(d Node, max Vec2) Vec2 {
 		if !cb.visible() {
 			continue
 		}
-		cs := Measure(c, shrink(max, cb.margin))
-		s.X = max32(s.X, cs.X+cb.margin.Horizontal()+cb.pos.X)
-		s.Y = max32(s.Y, cs.Y+cb.margin.Vertical()+cb.pos.Y)
+		m := marginPx(cb)
+		cs := Measure(c, shrink(max, m))
+		s.X = max32(s.X, cs.X+m.Horizontal()+cb.pos.X)
+		s.Y = max32(s.Y, cs.Y+m.Vertical()+cb.pos.Y)
 	}
 	return s
 }
@@ -82,7 +84,7 @@ func Arrange(d Node, r Rect) {
 	}
 	b.rect = r
 	b.flags |= flagLaidOut
-	content := Rect{b.padding.Left, b.padding.Top, r.W - b.padding.Horizontal(), r.H - b.padding.Vertical()}
+	content := b.ContentRect()
 	if l, ok := d.(Layouter); ok {
 		l.ArrangeChildren(content)
 		return
@@ -99,12 +101,19 @@ func ArrangeFree(c Node, area Rect) {
 	if !cb.visible() {
 		return
 	}
-	avail := shrink(Vec2{area.W, area.H}, cb.margin)
+	m := marginPx(cb)
+	avail := shrink(Vec2{area.W, area.H}, m)
 	s := Measure(c, avail)
-	x := area.X + cb.margin.Left + cb.anchor.X*avail.X - cb.origin.X*s.X + cb.pos.X
-	y := area.Y + cb.margin.Top + cb.anchor.Y*avail.Y - cb.origin.Y*s.Y + cb.pos.Y
+	x := area.X + m.Left + cb.anchor.X*avail.X - cb.origin.X*s.X + cb.pos.X
+	y := area.Y + m.Top + cb.anchor.Y*avail.Y - cb.origin.Y*s.Y + cb.pos.Y
 	Arrange(c, Rect{x, y, s.X, s.Y})
 }
+
+func padPx(b *Box) Insets    { return b.padding.Scale(Unit()) }
+func marginPx(b *Box) Insets { return b.margin.Scale(Unit()) }
+
+// radiusPx scales a corner radius given in units.
+func radiusPx(r int16) int16 { return Round(float32(r) * Unit()) }
 
 func shrink(v Vec2, m Insets) Vec2 {
 	return Vec2{max32(v.X-m.Horizontal(), 0), max32(v.Y-m.Vertical(), 0)}

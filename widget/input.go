@@ -124,9 +124,8 @@ func (in *Input) DrawOver(c gfx.Canvas) {
 	if !in.waiting {
 		return
 	}
-	r := in.Rect()
-	x := ui.Round(r.W - in.Padding().Right*ui.Unit() - 9*ui.Unit())
-	drawWaiting(c, x, ui.Round(r.H/2), in.elapsed)
+	r := in.ContentRect()
+	drawWaiting(c, ui.Round(r.Right()-9*ui.Unit()), ui.Round(r.Center().Y), in.elapsed)
 }
 
 // dropLast removes the final UTF-8 character.

@@ -222,10 +222,11 @@ func (s *Scroll) Reveal(d ui.Node) {
 			continue
 		}
 		lo, size := span(r, i)
+		m := revealMargin * ui.Unit()
 		if lo < s.pos[i] {
-			s.pos[i] = lo - revealMargin
+			s.pos[i] = lo - m
 		} else if lo+size > s.pos[i]+s.view[i] {
-			s.pos[i] = lo + size - s.view[i] + revealMargin
+			s.pos[i] = lo + size - s.view[i] + m
 		}
 		s.pos[i] = clampf(s.pos[i], 0, s.limit[i])
 		s.pull[i] = 0
@@ -364,15 +365,15 @@ func (s *Scroll) DrawOver(c gfx.Canvas) {
 		return
 	}
 	r := s.Rect()
-	pad := s.Padding()
+	in := s.ContentRect()
 	col := ui.CurrentTheme.Foreground
 	if s.on(1) && s.limit[1] > 0 {
 		lo, size := thumb(s.thumb[1].Get(), s.limit[1], s.view[1])
-		c.VLine(ui.Round(r.W-1), ui.Round(pad.Top+lo), ui.Round(size), col)
+		c.VLine(ui.Round(r.W-1), ui.Round(in.Y+lo), ui.Round(size), col)
 	}
 	if s.on(0) && s.limit[0] > 0 {
 		lo, size := thumb(s.thumb[0].Get(), s.limit[0], s.view[0])
-		c.HLine(ui.Round(pad.Left+lo), ui.Round(r.H-1), ui.Round(size), col)
+		c.HLine(ui.Round(in.X+lo), ui.Round(r.H-1), ui.Round(size), col)
 	}
 }
 

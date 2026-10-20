@@ -145,11 +145,14 @@ func paint(d Node, c gfx.Canvas) {
 		}
 		c = c.Clip(local)
 	}
-	if b.flags&flagBackground != 0 {
-		c.FillRoundRect(local, b.radius, b.bg)
-	}
-	if b.flags&flagBorder != 0 {
-		c.StrokeRoundRect(local, b.radius, b.border)
+	if b.flags&(flagBackground|flagBorder) != 0 {
+		rad := radiusPx(b.radius)
+		if b.flags&flagBackground != 0 {
+			c.FillRoundRect(local, rad, b.bg)
+		}
+		if b.flags&flagBorder != 0 {
+			c.StrokeRoundRect(local, rad, b.border)
+		}
 	}
 	if dr, ok := d.(Painter); ok {
 		dr.Draw(c)

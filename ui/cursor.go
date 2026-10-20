@@ -151,7 +151,7 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 		return
 	}
 	p := r.Pixels()
-	rad := min(CurrentTheme.Radius, p.H/2, p.W/2)
+	rad := min(radiusPx(CurrentTheme.Radius), p.H/2, p.W/2)
 	if cv.CanInvert() {
 		cv.InvertRoundRect(p, rad)
 	} else {

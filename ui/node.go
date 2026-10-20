@@ -89,6 +89,13 @@ func (b *Box) Children() []Node { return b.children }
 // Rect is the laid-out rectangle relative to the parent, without the offset.
 func (b *Box) Rect() Rect { return b.rect }
 
+// ContentRect is the area inside the padding, in pixels and in the node's
+// own coordinates.
+func (b *Box) ContentRect() Rect {
+	p := padPx(b)
+	return Rect{p.Left, p.Top, b.rect.W - p.Horizontal(), b.rect.H - p.Vertical()}
+}
+
 // OffsetX is an animated translation applied on top of layout. Children
 // inherit it because they are drawn relative to their parent.
 func (b *Box) OffsetX() *anim.Value { return &b.offsetX }
@@ -215,6 +222,7 @@ func (b *Box) SetBorder(c gfx.Color) {
 	Invalidate()
 }
 
+// SetRadius rounds the background and border, in units.
 func (b *Box) SetRadius(r int16) {
 	b.radius = r
 	Invalidate()

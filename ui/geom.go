@@ -32,7 +32,7 @@ func (r Rect) Pixels() gfx.Rect {
 	return gfx.Rect{X: x, Y: y, W: Round(r.Right()) - x, H: Round(r.Bottom()) - y}
 }
 
-// Insets are margins or padding.
+// Insets are margins or padding, in units; see Unit.
 type Insets struct{ Left, Top, Right, Bottom float32 }
 
 func All(v float32) Insets           { return Insets{v, v, v, v} }
@@ -40,6 +40,11 @@ func XY(x, y float32) Insets         { return Insets{x, y, x, y} }
 func LTRB(l, t, r, b float32) Insets { return Insets{l, t, r, b} }
 func (i Insets) Horizontal() float32 { return i.Left + i.Right }
 func (i Insets) Vertical() float32   { return i.Top + i.Bottom }
+
+// Scale multiplies every side by f, such as Unit to get pixels.
+func (i Insets) Scale(f float32) Insets {
+	return Insets{i.Left * f, i.Top * f, i.Right * f, i.Bottom * f}
+}
 
 type sizeMode uint8
 

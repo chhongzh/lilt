@@ -23,7 +23,10 @@ func (m *mark) init(radio bool) {
 
 func (m *mark) Leaf() {}
 
-func (m *mark) Measure(ui.Vec2) ui.Vec2 { return ui.Vec2{X: markSize, Y: markSize} }
+func (m *mark) Measure(ui.Vec2) ui.Vec2 {
+	s := float32(ui.Round(markSize * ui.Unit()))
+	return ui.Vec2{X: s, Y: s}
+}
 
 // turn is not called set: TinyGo 0.42 and 0.43 crash compiling a type that
 // embeds ui.Box and declares a method named like one of Box's unexported ones.
@@ -38,8 +41,9 @@ func (m *mark) turn(on bool) {
 
 func (m *mark) Draw(c gfx.Canvas) {
 	col := ui.CurrentTheme.Foreground
-	h := int16(markSize / 2)
-	fill := ui.Round(clampf(m.on.Get(), 0, 1.3) * 2.6)
+	size := m.Rect().Pixels().W
+	h := size / 2
+	fill := ui.Round(clampf(m.on.Get(), 0, 1.3) * float32(size) * 0.29)
 	if m.radio {
 		c.StrokeCircle(h, h, h, col)
 		if fill > 0 {
@@ -47,7 +51,7 @@ func (m *mark) Draw(c gfx.Canvas) {
 		}
 		return
 	}
-	c.StrokeRoundRect(gfx.Rect{W: markSize, H: markSize}, 2, col)
+	c.StrokeRoundRect(gfx.Rect{W: size, H: size}, 2, col)
 	if fill > 0 {
 		c.FillRect(gfx.Rect{X: h - fill + 1, Y: h - fill + 1, W: 2*fill - 1, H: 2*fill - 1}, col)
 	}
