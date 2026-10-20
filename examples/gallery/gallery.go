@@ -58,7 +58,7 @@ func Page(title string, body ui.Node) ui.Node {
 func padded() *widget.List {
 	l := widget.NewList()
 	l.Column().SetPadding(ui.XY(2, 1))
-	l.Column().SetGap(2)
+	l.Column().SetGap(ui.CurrentTheme.Gap)
 	return l
 }
 
@@ -334,7 +334,7 @@ func longText() ui.Node {
 		widget.NewListItem("A title far too long to fit, scrolling while focused"),
 		widget.NewLabel("This one scrolls all the time, focus or not.",
 			widget.Font(t.SmallFont), widget.MarqueeMode(widget.MarqueeAlways),
-			ui.Padding(ui.XY(4, 1))),
+			ui.Padding(t.RowPadding)),
 	)
 	for i := 1; i <= 30; i++ {
 		ui.Add(l, widget.NewListItem("Row "+strconv.Itoa(i)))

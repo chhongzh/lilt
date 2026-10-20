@@ -31,7 +31,7 @@ func NewDrawer(edge Edge, title string, opts ...ui.Option) *Drawer {
 	d.SetPadding(ui.LTRB(0, 2, 0, 1))
 	if title != "" {
 		t := ui.CurrentTheme
-		d.title = NewLabel(title, Font(t.SmallFont), TextColor(t.Muted), ui.Padding(ui.XY(4, 1)))
+		d.title = NewLabel(title, Font(t.SmallFont), TextColor(t.Muted), ui.Padding(t.RowPadding))
 		ui.Attach(d, d.title)
 	}
 	ui.Apply(d, opts)
