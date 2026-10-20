@@ -56,7 +56,7 @@ func (f *focusManager) leaving(b *Box) {
 		return
 	}
 	var next Node
-	if scope := screens.scope(); scope != nil {
+	if scope := layers.scope(); scope != nil {
 		fd := finder{dir: KeyNone, src: restRect(f.current), from: f.current.box(), exclude: b}
 		fd.walk(scope)
 		next = fd.best
@@ -279,7 +279,7 @@ func navigate(e *KeyEvent) {
 	case Release:
 		cursor.Lean(0, 0)
 	}
-	scope := screens.scope()
+	scope := layers.scope()
 	cur := focus.current
 	if scope == nil {
 		return

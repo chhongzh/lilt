@@ -5,11 +5,8 @@ import (
 	"github.com/chhongzh/lilt/ui"
 )
 
-// sheetMax is the share of the screen height a Select sheet may take.
-const sheetMax = 0.8
-
 // Select is a list row showing the chosen option; activating it opens a
-// sheet of radios.
+// bottom Drawer of radios. Picking one closes the drawer.
 type Select struct {
 	ListItem
 	value    *Label
@@ -45,26 +42,27 @@ func (s *Select) optionText() string {
 }
 
 func (s *Select) open() {
-	t := ui.CurrentTheme
-	_, sh := ui.ScreenSize()
-	header := NewLabel(s.title.Text(), Font(t.SmallFont), ui.Padding(ui.XY(4, 1)))
+	d := NewDrawer(Bottom, s.title.Text())
 	list := NewList()
-	group := NewRadioGroup(s.selected, func(i int) {
-		s.SetSelected(i)
-		if s.onChange != nil {
-			s.onChange(i)
-		}
-		ui.Pop()
-	})
-	for _, o := range s.options {
-		ui.Add(list, NewRadio(group, o))
+	group := NewRadioGroup(s.selected, nil)
+	for i, o := range s.options {
+		ui.Add(list, NewRadio(group, o, OnClick(func() {
+			d.Close()
+			if i != s.selected {
+				s.SetSelected(i)
+				if s.onChange != nil {
+					s.onChange(i)
+				}
+			}
+		})))
 	}
-	row := float32(gfx.LineHeight(t.Font)) + 2
-	head := float32(gfx.LineHeight(t.SmallFont)) + 2
-	h := min(row*float32(len(s.options)), float32(sh)*sheetMax-head)
-	list.SetHeight(ui.Px(h))
-	sheet := ui.NewColumn(ui.Padding(ui.LTRB(0, 2, 0, 1)), ui.Children(header, list))
-	ui.Push(sheet, ui.Sheet)
+	// The list is sized to its rows so a short one does not fill the drawer.
+	_, sh := ui.ScreenSize()
+	row := float32(gfx.LineHeight(ui.CurrentTheme.Font)) + 2
+	room := float32(sh)*0.8 - d.TitleHeight() - d.Padding().Vertical()
+	list.SetHeight(ui.Px(min(row*float32(len(s.options)), room)))
+	ui.Add(d, list)
+	d.Open()
 	if s.selected >= 0 && s.selected < len(group.Radios()) {
 		ui.SetFocus(group.Radios()[s.selected])
 	}

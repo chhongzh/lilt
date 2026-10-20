@@ -24,7 +24,7 @@ func Home(extra ...Demo) ui.Node {
 	for _, d := range append(extra, demos...) {
 		build := d.Build
 		ui.Add(home, widget.NewListItem(d.Title, widget.OnClick(func() {
-			ui.Push(build(), ui.SlideLeft)
+			ui.Push(build())
 		})))
 	}
 	return Page("Gallery", home)

@@ -66,18 +66,17 @@ func (tl *todoList) add(text string) {
 }
 
 func (tl *todoList) edit(row ui.Node, task *widget.CheckBox) {
-	t := ui.CurrentTheme
-	header := widget.NewLabel(task.Title().Text(), widget.Font(t.SmallFont),
-		ui.Padding(ui.XY(2, 0)))
+	d := widget.NewDrawer(widget.Bottom, task.Title().Text(), ui.Gap(2),
+		ui.Padding(ui.LTRB(2, 2, 2, 2)))
 	rename := widget.NewButton("Rename", widget.OnClick(func() {
-		ui.Pop()
+		d.Close()
 		textInput().Open(taskTitle{task})
 	}))
 	del := widget.NewButton("Hold to delete", widget.HoldToConfirm(800*time.Millisecond),
 		widget.OnClick(func() {
-			// Popping first hands focus back to this row's Edit button, so
+			// Closing first hands focus back to this row's Edit button, so
 			// removing the row then moves it to a neighbour.
-			ui.Pop()
+			d.Close()
 			if task.Checked() {
 				tl.done--
 			}
@@ -85,8 +84,8 @@ func (tl *todoList) edit(row ui.Node, task *widget.CheckBox) {
 			ui.Remove(row)
 			tl.refresh()
 		}))
-	ui.Push(ui.NewColumn(ui.Gap(2), ui.Padding(ui.LTRB(2, 2, 2, 2)),
-		ui.Children(header, rename, del)), ui.Sheet)
+	ui.Add(d, rename, del)
+	d.Open()
 }
 
 func (tl *todoList) refresh() {

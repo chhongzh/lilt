@@ -216,7 +216,7 @@ func (m *inputManager) dispatch(e KeyEvent) {
 // unclaimed runs the framework's own behaviour for keys no node took.
 func (m *inputManager) unclaimed(e *KeyEvent) {
 	if e.Key == KeyBack {
-		screens.back(e)
+		layers.back(e)
 	} else {
 		navigate(e)
 	}

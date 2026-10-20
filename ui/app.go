@@ -28,10 +28,10 @@ var (
 	scrW, scrH int16
 	root       = &Stack{}
 
-	screens screenStack
-	focus   focusManager
-	input   inputManager
-	cursor  Cursor
+	layers layerStack
+	focus  focusManager
+	input  inputManager
+	cursor Cursor
 
 	// frameMu is held for the whole of each frame; Do takes it between frames.
 	frameMu sync.Mutex
@@ -51,16 +51,16 @@ func boot(s gfx.Screen, first any) {
 	root.width, root.height = Px(float32(scrW)), Px(float32(scrH))
 	Relayout()
 	if n, ok := first.(Node); ok && n != nil {
-		Push(n, SlideLeft)
+		Push(n)
 	}
 }
 
 func reset() {
 	frameMu.Lock()
 	defer frameMu.Unlock()
-	for len(screens.hosts) > 0 {
-		h := screens.hosts[len(screens.hosts)-1]
-		screens.hosts = screens.hosts[:len(screens.hosts)-1]
+	for len(layers.list) > 0 {
+		h := layers.list[len(layers.list)-1]
+		layers.list = layers.list[:len(layers.list)-1]
 		Remove(h)
 	}
 	focus.Set(nil)
@@ -87,14 +87,14 @@ func frame(dt float32) (bool, error) {
 		Invalidate()
 	}
 	update(root, dt)
-	screens.update()
+	layers.update()
 	if anim.Step(dt) {
 		Invalidate()
 	}
 	if needsLayout {
 		needsLayout = false
 		Arrange(root, Rect{0, 0, float32(scrW), float32(scrH)})
-		screens.focusFirst()
+		layers.focusFirst()
 	}
 	cursor.update()
 	if !needsDraw {
@@ -154,7 +154,7 @@ func paint(d Node, c gfx.Canvas) {
 
 // hitTest finds the deepest visible node under a screen point in the top screen.
 func hitTest(x, y int16) Node {
-	s := screens.scope()
+	s := layers.scope()
 	if s == nil {
 		return nil
 	}
@@ -183,12 +183,6 @@ func hit(d Node, x, y, ox, oy int16) Node {
 	}
 	return nil
 }
-
-// Push shows d as a new screen.
-func Push(d Node, t Transition) { screens.Push(d, t) }
-
-// Pop dismisses the top screen.
-func Pop() bool { return screens.Pop() }
 
 // SetFocus moves focus to d.
 func SetFocus(d Node) { focus.Set(d) }
