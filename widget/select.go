@@ -6,9 +6,9 @@ import (
 )
 
 // Select is a list row showing the chosen option; activating it opens a
-// bottom Drawer of radios. Picking one closes the drawer and reports the
-// change through OnChange, while the row shows its loading; a handler
-// that fails puts the old option back.
+// bottom Drawer of radios. Picking one closes the drawer and runs OnChange,
+// if the option changed, then OnClick, while the row shows its loading; a
+// handler that fails puts the old option back.
 type Select struct {
 	ListItem
 	value    *Label
@@ -49,7 +49,7 @@ func (s *Select) open() {
 	group.picked = func(from, to int) {
 		d.Close()
 		s.SetSelected(to)
-		s.run(changeCall(s.change, from, to), func(err error) {
+		s.run(chain(changeCall(s.change, from, to), clickCall(s.click)), func(err error) {
 			if err != nil {
 				s.SetSelected(from)
 				shake(s)

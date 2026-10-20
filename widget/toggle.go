@@ -90,7 +90,7 @@ func (cb *CheckBox) SetChecked(v bool) {
 func (cb *CheckBox) toggle() {
 	from := cb.checked
 	cb.SetChecked(!from)
-	cb.run(changeCall(cb.change, from, !from), func(err error) {
+	cb.run(chain(changeCall(cb.change, from, !from), clickCall(cb.click)), func(err error) {
 		if err != nil {
 			cb.SetChecked(from)
 			shake(cb)
@@ -128,8 +128,8 @@ func (g *RadioGroup) Select(i int) {
 	}
 }
 
-// Radio is a list row belonging to a RadioGroup. Its OnClick handler, if
-// any, runs after the group's OnChange.
+// Radio is a list row belonging to a RadioGroup. Its OnClick handler runs
+// after the group's OnChange.
 type Radio struct {
 	ListItem
 	mark  mark
@@ -163,18 +163,7 @@ func (r *Radio) choose() {
 	if g.picked != nil {
 		g.picked(from, to)
 	}
-	change, click := changeCall(g.change, from, to), clickCall(r.click)
-	call := change
-	if click != nil {
-		call = func() error {
-			if change != nil {
-				if err := change(); err != nil {
-					return err
-				}
-			}
-			return click()
-		}
-	}
+	call := chain(changeCall(g.change, from, to), clickCall(r.click))
 	g.busy = call != nil
 	r.run(call, func(err error) {
 		g.busy = false

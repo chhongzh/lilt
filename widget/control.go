@@ -26,7 +26,9 @@ type ChangeFunc interface {
 // waiting, so quick handlers never flash a spinner.
 const loadingDelay = 0.15
 
-// Control holds a widget's event handlers and the state they drive. Every
+// Control holds a widget's event handlers and the state they drive. OnClick
+// runs whenever the widget is activated; OnChange, for widgets with a value,
+// runs first when the activation changed it. Every
 // handler runs on its own goroutine, never on the UI goroutine, so a slow
 // one cannot stall a frame; meanwhile the widget ignores activation and,
 // past loadingDelay, shows loading dots. Handlers change the tree only
@@ -98,6 +100,22 @@ func (c *Control) run(call func() error, done func(error)) bool {
 		})
 	}()
 	return true
+}
+
+// chain runs a and then b, stopping at the first error; either may be nil.
+func chain(a, b func() error) func() error {
+	if a == nil || b == nil {
+		if a == nil {
+			return b
+		}
+		return a
+	}
+	return func() error {
+		if err := a(); err != nil {
+			return err
+		}
+		return b()
+	}
 }
 
 func clickCall(h any) func() error {
