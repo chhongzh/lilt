@@ -103,8 +103,18 @@ func frame(dt float32) (bool, error) {
 	needsDraw = false
 	c := gfx.NewCanvas(screen)
 	c.FillRect(gfx.Rect{W: scrW, H: scrH}, CurrentTheme.Background)
-	paint(root, c)
+	// Toasts float above the cursor so a focused row cannot invert them.
+	for _, l := range layers.list {
+		if l.kind != Toast {
+			paint(l, c)
+		}
+	}
 	cursor.draw(c)
+	for _, l := range layers.list {
+		if l.kind == Toast {
+			paint(l, c)
+		}
+	}
 	return true, screen.Flush()
 }
 

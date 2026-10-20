@@ -34,6 +34,7 @@ var demos = []Demo{
 	{"Buttons", buttons},
 	{"Toggles", toggles},
 	{"Select", selects},
+	{"Popups", popups},
 	{"Chips", chips},
 	{"Flex", flex},
 	{"Grid", grid},
@@ -89,6 +90,11 @@ func toggles() ui.Node {
 	ui.Add(l,
 		widget.NewCheckBox("Wi-Fi", false),
 		widget.NewCheckBox("Bluetooth", true),
+		// A slow handler that fails: dots, a shake, and the box flips back.
+		widget.NewCheckBox("Cloud sync", false, widget.OnChange(func(from, to bool) error {
+			time.Sleep(time.Second)
+			return errors.New("offline")
+		})),
 	)
 	g := widget.NewRadioGroup(0)
 	for _, s := range []string{"Dark", "Light", "Auto"} {
@@ -107,6 +113,57 @@ func selects() ui.Node {
 		}, 0),
 	)
 	return Page("Select", l)
+}
+
+// popups opens a drawer from each edge, a dialog whose action takes a
+// moment, and a toast.
+func popups() ui.Node {
+	l := widget.NewList()
+	edges := []struct {
+		name string
+		edge widget.Edge
+	}{
+		{"Drawer from bottom", widget.Bottom},
+		{"Drawer from top", widget.Top},
+		{"Drawer from left", widget.Left},
+		{"Drawer from right", widget.Right},
+	}
+	for _, e := range edges {
+		ui.Add(l, widget.NewListItem(e.name, widget.OnClick(func() {
+			ui.Do(func() { menu(e.edge).Open() })
+		})))
+	}
+	ui.Add(l,
+		widget.NewListItem("Dialog", widget.OnClick(func() {
+			ui.Do(func() {
+				widget.NewDialog("Delete map?", "Blue Zenith goes for good, scores and all",
+					widget.NewButton("Keep"),
+					widget.NewButton("Delete", widget.OnClick(func() {
+						time.Sleep(700 * time.Millisecond)
+						ui.Do(func() { widget.Toast("Deleted") })
+					})),
+				).Open()
+			})
+		})),
+		widget.NewListItem("Toast", widget.OnClick(func() {
+			ui.Do(func() { widget.Toast("Saved to slot 2") })
+		})),
+	)
+	return Page("Popups", l)
+}
+
+// menu is a drawer of three entries, each closing it and saying which was picked.
+func menu(edge widget.Edge) *widget.Drawer {
+	d := widget.NewDrawer(edge, "Menu")
+	for _, s := range []string{"Profile", "Settings", "Sign out"} {
+		ui.Add(d, widget.NewListItem(s, widget.OnClick(func() {
+			ui.Do(func() {
+				d.Close()
+				widget.Toast(s)
+			})
+		})))
+	}
+	return d
 }
 
 // caption is a small muted line naming the row below it.
