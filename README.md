@@ -13,32 +13,37 @@
 ## 包
 
 ```
+lilt      Start、Pause、Stop：启动和停止 UI goroutine
 anim      弹簧动画 Value 与全局调度器
 gfx       Screen 接口、带裁剪和平移的 Canvas、字体
-ui        节点树、布局（Flex / Grid / Stack）、App 主循环、屏幕栈、焦点、输入、光标、主题
-widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Chip、Choice、Toggles、Input、软键盘
+ui        节点树、布局（Flex / Grid / Stack）、页面与弹窗的层栈、焦点、输入、光标、主题
+widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Chip、Choice、Toggles、Input、
+          Drawer、Dialog、Toast、软键盘
 driver    SH1106 驱动（待重写）
 examples  gallery 演示，以及跑 gallery 的 ESP32-S3 固件（esp32s3-generic）
 cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截图拼图
 ```
 
-`anim`、`gfx`、`ui`、`widget` 不 import `machine`，主机上可以直接编译和预览。
+除了 `driver`，这些包都不 import `machine`，主机上可以直接编译和预览。
 
 ## 接入一块屏幕
 
 驱动实现 `gfx.Screen` 即可；能反色的屏再实现 `gfx.Inverter`，光标会改成反色绘制。实现了 `drivers.Displayer`（`Size`、`SetPixel`、`Display`）的 tinygo 驱动可以直接用 `gfx.FromDisplayer` 包一层。驱动自带 `FillRectangle` 时用它填充，没有就逐点画。想要反色光标或更快的填充，可以自己写适配器（参考 [examples/esp32s3-generic/main.go](examples/esp32s3-generic/main.go)）。
 
 ```go
-app := ui.NewApp(screen)
-ui.Push(page, ui.SlideLeft)
-app.Run() // 或者在自己的循环里调用 app.Frame(dt)
+lilt.Start(screen, home) // 之后 UI 在自己的 goroutine 上跑
+select {}                // 或者在这里跑自己的业务代码
 ```
+
+整个框架是单例，对外只有 `lilt.Start`、`lilt.Pause`、`lilt.Stop`。暂停后再调用 `Start` 即恢复；`Stop` 之后可以重新 `Start`。
 
 按键由调用方自己读引脚，再交给框架：
 
-- `ui.KeyPoller` 负责消抖和按住加速重复，每帧对每个键调用一次 `Poll`；
-- 也可以直接 `app.Input.Emit(key, phase)`，任何 goroutine 都能调用；
-- 触摸屏用 `EmitPointer`，物理键盘用 `EmitRune`。
+- `ui.KeyPoller` 负责消抖和按住加速重复，对每个键定期调用 `Poll`；
+- 也可以直接 `ui.Emit(key, phase)`，任何 goroutine 都能调用；
+- 触摸屏用 `ui.EmitPointer`，物理键盘用 `ui.EmitRune`。
+
+树只属于 UI goroutine。`Start` 之前在任何地方建树都行；之后要改树，就把代码包在 `ui.Do(func() { ... })` 里，它在两帧之间执行。
 
 ## 支持的硬件
 
@@ -49,7 +54,7 @@ app.Run() // 或者在自己的循环里调用 app.Frame(dt)
 ```go
 dev := ssd1306.NewI2C(machine.I2C0)
 dev.Configure(ssd1306.Config{Width: 128, Height: 64})
-app := ui.NewApp(gfx.FromDisplayer(dev))
+lilt.Start(gfx.FromDisplayer(dev), home)
 ```
 
 **带帧缓冲的单色屏**：最合适。框架画进驱动的缓冲区，`Display` 一次推整屏。
@@ -75,7 +80,7 @@ app := ui.NewApp(gfx.FromDisplayer(dev))
 | `ssd1289` | SSD1289 TFT，240x320，并口 | |
 | `hub75` | HUB75 RGB LED 点阵 | |
 
-**电子墨水屏**：带缓冲，但每次 `Display` 都要刷新整屏，耗时可达数秒，弹簧动画基本看不到。适合静态菜单，最好把 `App.Frame` 的调用频率降下来。
+**电子墨水屏**：带缓冲，但每次 `Display` 都要刷新整屏，耗时可达数秒，弹簧动画基本看不到。适合静态菜单，最好把 `lilt.FPS` 调低。
 
 | 驱动 | 屏幕 | 原生填充 |
 | --- | --- | --- |
@@ -98,16 +103,21 @@ app := ui.NewApp(gfx.FromDisplayer(dev))
 - 按键事件分 `Press`、`Repeat`、`Release`。按下只给反馈，动作在**松手**且未被取消（`!Canceled`）时触发；按住进入连发后，每次 `Repeat` 触发一次，松手不再补一次。`KeyEvent.Fires()` 把这条规则封装好了。触摸变成拖动后，那次松手会带上 `Canceled`。
 - 每个键的按下反馈：OK 让光标收缩；方向键让光标朝那个方向探一点，松手才移过去；Back 让当前屏往右露出一点下面的屏，松手才返回，在根屏上则只轻轻顶一下。
 - 光标换目标时先朝新位置拉长再收拢；旧目标随屏幕一起消失时，光标会跳到新位置。松开 OK 时光标带着回弹恢复原样。
-- `Button` 支持 `HoldToConfirm(d)`：按住时光标从左往右缩短，缩到右端才执行。`OnAction` 在后台跑，按钮显示加载点，成功显示勾，失败显示叉并抖一下。
+- 事件只有两种：`OnClick(fn)` 在组件被激活时调用，`OnChange(fn)` 在用户改了值时调用，参数是旧值和新值 `func(from, to T)`。两者都可以返回 `error`。代码里调用 Set 改值不会触发 OnChange。
+- 回调永远不在 UI goroutine 上跑，每次都在自己的 goroutine 里执行，回调里要改界面就用 `ui.Do`。回调运行期间组件不再响应激活；超过 150ms 显示加载点（按钮换掉文字，行换掉尾部控件，Chip 换掉横条）；返回 error 时组件抖一下，值类组件恢复旧值。
+- `Button` 支持 `HoldToConfirm(d)`：按住时光标从左往右缩短，缩到右端才执行。显示过加载点的按钮结束时亮一个勾，失败显示叉。
 - 列表滚动时每一行各有一个弹簧，离光标越远的行响应越慢，整列像波浪一样跟上来（`Scroll.SetStagger` 调节，0 关闭）。滚到顶或底还继续按，整个列表会往那个方向被推一下，松开弹回。
 - `Choice`（单选）和 `Toggles`（多选）是横向的一排 Chip，左右键移动，松手切换，选中项下方的横条从中间长出来。
-- 屏幕栈有两种转场：`SlideLeft`（新屏从右侧滑入，旧屏退到左边 1/3 处）和 `Sheet`（从底部升起，高度按内容算）。被不透明屏完全盖住的屏会被隐藏，不参与更新和绘制。
+- 页面和弹窗共用一个层栈。`ui.Push` 的页面从右侧滑入，旧页面退到左边 1/3 处；被其他页面完全盖住的页面隐藏，不参与更新和绘制。
+- `ui.Open` 打开弹窗：`DrawerBottom`、`DrawerTop`、`DrawerLeft`、`DrawerRight` 从对应边缘滑入，大小按内容算；`Dialog` 落到屏幕中央；`Toast` 从底部浮起，不抢焦点。`widget.Drawer`、`widget.Dialog`、`widget.Toast` 是现成的封装，`Select` 就是一个底部 Drawer。
+- 滚动容器可以嵌套：内层滚到头、后面也没有可聚焦的节点时，按键交给外层还能滚的容器。
 - 所有放不下的 `Label` 都会滚动（跑马灯），区别只在何时滚：默认在自己或祖先获得焦点时滚，`MarqueeAlways` 一直滚。右对齐的 Label 平时停在末尾。
-- `Input` 松手后打开 `App.TextInput`；没设置时使用 `widget.Keyboard` 软键盘。
+- `Input` 松手后打开 `ui.TextInput`；没设置时使用 `widget.Keyboard` 软键盘。
 
 ## 渲染与布局
 
 - 任何属性变化都会标记重新布局，下一帧整树重排。
+- Padding、Margin、Gap 和圆角都以单位计：一个单位等于主题字体行高除以默认字体行高。默认字体下一个单位就是一像素，换大字体时间距一起放大。行、输入框、按钮的内边距统一取自主题（`RowPadding`、`ButtonPadding`、`Gap`）。
 - 有变化时整屏重绘，不做脏矩形。
 - 每帧不分配内存。
 - 只用 float32，不依赖 `strings` 包。
@@ -117,12 +127,12 @@ app := ui.NewApp(gfx.FromDisplayer(dev))
 
 ```sh
 gofmt -l anim gfx ui widget examples cmd
-go vet ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
+go vet . ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
 go run ./cmd/preview -o /tmp/preview
 tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
 
-`go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。
+`go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。preview 不经过 `lilt.Start`，而是通过 `internal/core` 自己逐帧推进，这样录出来的每一帧都在固定的时间点上。
 
 preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。加 `-highlight` 改录半分钟的精华片段 `highlight.gif`，也就是本文开头那张。
 
