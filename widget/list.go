@@ -29,7 +29,7 @@ func (l *List) Column() *ui.Flex { return l.column }
 type ListItem struct {
 	ui.Flex
 	title    *Label
-	trailing ui.Drawable
+	trailing ui.Node
 	onClick  func()
 	// activate is the embedding widget's own behaviour, run before onClick.
 	activate func()
@@ -58,7 +58,7 @@ func (li *ListItem) SetFont(f *gfx.Font) { li.title.SetFont(f) }
 
 func (li *ListItem) SetOnClick(fn func()) { li.onClick = fn }
 
-func (li *ListItem) SetTrailing(d ui.Drawable) {
+func (li *ListItem) SetTrailing(d ui.Node) {
 	if li.trailing != nil {
 		ui.Remove(li.trailing)
 	}

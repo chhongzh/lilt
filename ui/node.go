@@ -5,18 +5,18 @@ import (
 	"github.com/chhongzh/lilt/gfx"
 )
 
-// Drawable is any node in the tree. It is satisfied only by types that embed
+// Node is any node in the tree. It is satisfied only by types that embed
 // Box, which carries the tree links, layout properties and the animated offset.
 // Behaviour comes from the optional interfaces below, found by type assertion.
-type Drawable interface {
+type Node interface {
 	box() *Box
 }
 
-// Drawer paints the node's own content, before its children.
-type Drawer interface{ Draw(c gfx.Canvas) }
+// Painter paints the node's own content, before its children.
+type Painter interface{ Draw(c gfx.Canvas) }
 
-// OverDrawer paints after the node's children.
-type OverDrawer interface{ DrawOver(c gfx.Canvas) }
+// OverPainter paints after the node's children.
+type OverPainter interface{ DrawOver(c gfx.Canvas) }
 
 // Updater runs once per frame while the node is attached and visible.
 type Updater interface{ Update(dt float32) }
@@ -33,13 +33,13 @@ type Layouter interface {
 
 // ContentHost redirects Add and RemoveChildren to an inner node, so a List
 // can take items while its scroll machinery stays private.
-type ContentHost interface{ Content() Drawable }
+type ContentHost interface{ Content() Node }
 
 // Leaf marks nodes that refuse children.
 type Leaf interface{ Leaf() }
 
 // ChildRemover is told when a child detaches, including a child removing itself.
-type ChildRemover interface{ ChildRemoved(child Drawable) }
+type ChildRemover interface{ ChildRemoved(child Node) }
 
 // Focuser is told when the node gains or loses focus.
 type Focuser interface{ FocusChanged(focused bool) }
@@ -59,8 +59,8 @@ const (
 // Box is the base every node embeds. Properties go through setters so a
 // change can schedule a relayout.
 type Box struct {
-	parent   Drawable
-	children []Drawable
+	parent   Node
+	children []Node
 
 	width, height       Size
 	anchor, origin, pos Vec2
@@ -79,12 +79,12 @@ type Box struct {
 func (b *Box) box() *Box { return b }
 
 // BoxOf returns the Box embedded in d.
-func BoxOf(d Drawable) *Box { return d.box() }
+func BoxOf(d Node) *Box { return d.box() }
 
-func (b *Box) Parent() Drawable { return b.parent }
+func (b *Box) Parent() Node { return b.parent }
 
 // Children must not be modified; use Add, Insert and Remove.
-func (b *Box) Children() []Drawable { return b.children }
+func (b *Box) Children() []Node { return b.children }
 
 // Rect is the laid-out rectangle relative to the parent, without the offset.
 func (b *Box) Rect() Rect { return b.rect }

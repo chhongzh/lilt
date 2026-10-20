@@ -19,9 +19,9 @@ const (
 // screenHost wraps each pushed screen so transitions can move it as a unit.
 type screenHost struct {
 	Box
-	content    Drawable
+	content    Node
 	transition Transition
-	focus      Drawable // restored when the screen above is popped
+	focus      Node // restored when the screen above is popped
 	exiting    bool
 }
 
@@ -78,7 +78,7 @@ type ScreenStack struct {
 }
 
 // Push shows d above the current screen.
-func (s *ScreenStack) Push(d Drawable, t Transition) {
+func (s *ScreenStack) Push(d Node, t Transition) {
 	w, h := float32(app.w), float32(app.h)
 	host := &screenHost{content: d, transition: t}
 	host.width, host.height = Rel(1), Rel(1)
@@ -157,7 +157,7 @@ func (s *ScreenStack) back(e *KeyEvent) {
 }
 
 // Top returns the content of the top screen, or nil.
-func (s *ScreenStack) Top() Drawable {
+func (s *ScreenStack) Top() Node {
 	if t := s.top(); t != nil {
 		return t.content
 	}
@@ -201,7 +201,7 @@ func (s *ScreenStack) below(h *screenHost) *screenHost {
 }
 
 // scope is the subtree that focus and pointer input are confined to.
-func (s *ScreenStack) scope() Drawable {
+func (s *ScreenStack) scope() Node {
 	if t := s.top(); t != nil {
 		return t
 	}

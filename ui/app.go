@@ -110,7 +110,7 @@ func (a *App) Run() error {
 	}
 }
 
-func update(d Drawable, dt float32) {
+func update(d Node, dt float32) {
 	b := d.box()
 	if !b.visible() {
 		return
@@ -123,7 +123,7 @@ func update(d Drawable, dt float32) {
 	}
 }
 
-func paint(d Drawable, c gfx.Canvas) {
+func paint(d Node, c gfx.Canvas) {
 	b := d.box()
 	if !b.visible() {
 		return
@@ -143,19 +143,19 @@ func paint(d Drawable, c gfx.Canvas) {
 	if b.flags&flagBorder != 0 {
 		c.StrokeRoundRect(local, b.radius, b.border)
 	}
-	if dr, ok := d.(Drawer); ok {
+	if dr, ok := d.(Painter); ok {
 		dr.Draw(c)
 	}
 	for _, ch := range b.children {
 		paint(ch, c)
 	}
-	if o, ok := d.(OverDrawer); ok {
+	if o, ok := d.(OverPainter); ok {
 		o.DrawOver(c)
 	}
 }
 
 // hitTest finds the deepest visible node under a screen point in the top screen.
-func (a *App) hitTest(x, y int16) Drawable {
+func (a *App) hitTest(x, y int16) Node {
 	s := a.Screens.scope()
 	if s == nil {
 		return nil
@@ -165,7 +165,7 @@ func (a *App) hitTest(x, y int16) Drawable {
 	return hit(s, x, y, ox-p.X, oy-p.Y)
 }
 
-func hit(d Drawable, x, y, ox, oy int16) Drawable {
+func hit(d Node, x, y, ox, oy int16) Node {
 	b := d.box()
 	if !b.visible() {
 		return nil
@@ -191,13 +191,13 @@ func hit(d Drawable, x, y, ox, oy int16) Drawable {
 func Post(fn func()) { app.posts <- fn }
 
 // Push shows d as a new screen.
-func Push(d Drawable, t Transition) { app.Screens.Push(d, t) }
+func Push(d Node, t Transition) { app.Screens.Push(d, t) }
 
 // Pop dismisses the top screen.
 func Pop() bool { return app.Screens.Pop() }
 
 // SetFocus moves focus to d.
-func SetFocus(d Drawable) { app.Focus.Set(d) }
+func SetFocus(d Node) { app.Focus.Set(d) }
 
 // Focused returns the focused node, or nil.
-func Focused() Drawable { return app.Focus.current }
+func Focused() Node { return app.Focus.current }

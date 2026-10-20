@@ -103,7 +103,7 @@ func main() {
 
 	app := ui.NewApp(oled{dev})
 	gallery.Build(
-		gallery.Demo{Title: "Keys", Build: func() ui.Drawable {
+		gallery.Demo{Title: "Keys", Build: func() ui.Node {
 			return gallery.Page("Keys", newKeypad(&held, &gpio))
 		}},
 		gallery.Demo{Title: "Pins", Build: pins},
@@ -131,7 +131,7 @@ func main() {
 }
 
 // pins lists every connection with its GPIO, for checking the wiring.
-func pins() ui.Drawable {
+func pins() ui.Node {
 	small := widget.Font(ui.CurrentTheme.SmallFont)
 	l := widget.NewList()
 	for _, w := range wiring {

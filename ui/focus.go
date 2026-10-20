@@ -9,21 +9,21 @@ package ui
 // that it is at its end; a Release that does not Fire is offered to every
 // scroller so each can let go, and must return false.
 type ArrowScroller interface {
-	ArrowScroll(e *KeyEvent, next Drawable) bool
+	ArrowScroll(e *KeyEvent, next Node) bool
 }
 
 // Revealer is told when a descendant gains focus so it can scroll it into view.
-type Revealer interface{ Reveal(d Drawable) }
+type Revealer interface{ Reveal(d Node) }
 
 // FocusManager tracks the single focused node.
 type FocusManager struct {
-	current Drawable
+	current Node
 }
 
-func (f *FocusManager) Current() Drawable { return f.current }
+func (f *FocusManager) Current() Node { return f.current }
 
 // Set focuses d, or clears focus for nil. Hidden or unfocusable nodes are ignored.
-func (f *FocusManager) Set(d Drawable) {
+func (f *FocusManager) Set(d Node) {
 	if d != nil && (!d.box().Focusable() || !shown(d)) {
 		return
 	}
@@ -44,7 +44,7 @@ func (f *FocusManager) Set(d Drawable) {
 	Invalidate()
 }
 
-func reveal(d Drawable) {
+func reveal(d Node) {
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		if r, ok := n.(Revealer); ok {
 			r.Reveal(d)
@@ -57,7 +57,7 @@ func (f *FocusManager) leaving(b *Box) {
 	if f.current == nil || !IsAncestor(b, f.current) {
 		return
 	}
-	var next Drawable
+	var next Node
 	if scope := app.Screens.scope(); scope != nil {
 		fd := finder{dir: KeyNone, src: restRect(f.current), from: f.current.box(), exclude: b}
 		fd.walk(scope)
@@ -67,7 +67,7 @@ func (f *FocusManager) leaving(b *Box) {
 	f.Set(next)
 }
 
-func shown(d Drawable) bool {
+func shown(d Node) bool {
 	for n := d; n != nil; n = n.box().parent {
 		if !n.box().visible() {
 			return false
@@ -79,7 +79,7 @@ func shown(d Drawable) bool {
 // FindFocus picks the node focus should move to from `from` in direction dir,
 // following Android's FocusFinder: candidates overlapping the source's beam
 // win, then the lowest 13·major² + minor² distance.
-func FindFocus(scope, from Drawable, dir Key) Drawable {
+func FindFocus(scope, from Node, dir Key) Node {
 	if from == nil {
 		return FirstFocusable(scope)
 	}
@@ -89,7 +89,7 @@ func FindFocus(scope, from Drawable, dir Key) Drawable {
 }
 
 // FirstFocusable returns the first focusable node in tree order.
-func FirstFocusable(d Drawable) Drawable {
+func FirstFocusable(d Node) Node {
 	b := d.box()
 	if !b.visible() {
 		return nil
@@ -107,7 +107,7 @@ func FirstFocusable(d Drawable) Drawable {
 
 // restOrigin sums layout positions and offset targets, so focus decisions
 // use where things are going rather than where an animation has them now.
-func restOrigin(d Drawable) (x, y float32) {
+func restOrigin(d Node) (x, y float32) {
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		b := n.box()
 		x += b.rect.X + b.offsetX.Target()
@@ -117,9 +117,9 @@ func restOrigin(d Drawable) (x, y float32) {
 }
 
 // RestRect is d's rect in screen pixels where its animations will settle.
-func RestRect(d Drawable) Rect { return restRect(d) }
+func RestRect(d Node) Rect { return restRect(d) }
 
-func restRect(d Drawable) Rect {
+func restRect(d Node) Rect {
 	x, y := restOrigin(d)
 	b := d.box()
 	return Rect{x + b.rect.X + b.offsetX.Target(), y + b.rect.Y + b.offsetY.Target(), b.rect.W, b.rect.H}
@@ -130,16 +130,16 @@ type finder struct {
 	src      Rect
 	from     *Box
 	exclude  *Box
-	best     Drawable
+	best     Node
 	bestRect Rect
 }
 
-func (f *finder) walk(scope Drawable) {
+func (f *finder) walk(scope Node) {
 	x, y := restOrigin(scope)
 	f.visit(scope, x, y)
 }
 
-func (f *finder) visit(d Drawable, ox, oy float32) {
+func (f *finder) visit(d Node, ox, oy float32) {
 	b := d.box()
 	if !b.visible() || b == f.exclude {
 		return

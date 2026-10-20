@@ -162,7 +162,7 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 // screenRect returns d's rect in screen pixels exactly as paint will place
 // it, clipped by its clipping ancestors. When nothing is visible the unclipped
 // rect is returned so the cursor does not fly to the corner.
-func screenRect(d Drawable) (Rect, bool) {
+func screenRect(d Node) (Rect, bool) {
 	x, y := pixelOrigin(d)
 	p := pixelRect(d.box())
 	own := gfx.Rect{X: x, Y: y, W: p.W, H: p.H}
@@ -188,7 +188,7 @@ func pixelRect(b *Box) gfx.Rect {
 }
 
 // pixelOrigin is d's top-left corner on screen as paint computes it.
-func pixelOrigin(d Drawable) (x, y int16) {
+func pixelOrigin(d Node) (x, y int16) {
 	for n := d; n != nil; n = n.box().parent {
 		p := pixelRect(n.box())
 		x += p.X

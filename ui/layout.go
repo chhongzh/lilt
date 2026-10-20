@@ -28,7 +28,7 @@ func resolve(s Size, avail float32) (v float32, auto bool) {
 }
 
 // Measure returns the size d wants inside max, the space left after its margin.
-func Measure(d Drawable, max Vec2) Vec2 {
+func Measure(d Node, max Vec2) Vec2 {
 	b := d.box()
 	w, autoW := resolve(b.width, max.X)
 	h, autoH := resolve(b.height, max.Y)
@@ -53,7 +53,7 @@ func Measure(d Drawable, max Vec2) Vec2 {
 	return Vec2{w, h}
 }
 
-func contentSize(d Drawable, max Vec2) Vec2 {
+func contentSize(d Node, max Vec2) Vec2 {
 	if m, ok := d.(Measurer); ok {
 		return m.Measure(max)
 	}
@@ -74,7 +74,7 @@ func contentSize(d Drawable, max Vec2) Vec2 {
 }
 
 // Arrange gives d its final rect, relative to its parent, and lays out its children.
-func Arrange(d Drawable, r Rect) {
+func Arrange(d Node, r Rect) {
 	b := d.box()
 	if b.flags&(flagAnimateLayout|flagLaidOut) == flagAnimateLayout|flagLaidOut {
 		b.offsetX.Shift(b.rect.X - r.X)
@@ -94,7 +94,7 @@ func Arrange(d Drawable, r Rect) {
 
 // ArrangeFree places c inside area by its anchor, origin and position. It is
 // the default for nodes that are not Layouters.
-func ArrangeFree(c Drawable, area Rect) {
+func ArrangeFree(c Node, area Rect) {
 	cb := c.box()
 	if !cb.visible() {
 		return

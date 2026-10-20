@@ -14,7 +14,7 @@ import (
 // Demo is a page the home list links to.
 type Demo struct {
 	Title string
-	Build func() ui.Drawable
+	Build func() ui.Node
 }
 
 // Build pushes the gallery's home screen onto the current app. Extra demos,
@@ -44,7 +44,7 @@ var demos = []Demo{
 }
 
 // Page stacks a small muted header above body, which takes the rest.
-func Page(title string, body ui.Drawable) ui.Drawable {
+func Page(title string, body ui.Node) ui.Node {
 	t := ui.CurrentTheme
 	header := widget.NewLabel(title, widget.Font(t.SmallFont), widget.TextColor(t.Muted),
 		ui.Padding(ui.LTRB(4, 1, 4, 0)))
@@ -60,7 +60,7 @@ func padded() *widget.List {
 	return l
 }
 
-func buttons() ui.Drawable {
+func buttons() ui.Node {
 	l := padded()
 	taps := 0
 	var tap *widget.Button
@@ -84,7 +84,7 @@ func buttons() ui.Drawable {
 	return Page("Buttons", l)
 }
 
-func toggles() ui.Drawable {
+func toggles() ui.Node {
 	l := widget.NewList()
 	ui.Add(l,
 		widget.NewCheckBox("Wi-Fi", false),
@@ -97,7 +97,7 @@ func toggles() ui.Drawable {
 	return Page("Toggles", l)
 }
 
-func selects() ui.Drawable {
+func selects() ui.Node {
 	l := widget.NewList()
 	ui.Add(l,
 		widget.NewSelect("Speed", []string{"Slow", "Normal", "Fast", "Ludicrous"}, 1),
@@ -116,7 +116,7 @@ func caption(s string) *widget.Label {
 		ui.Padding(ui.LTRB(4, 2, 4, 0)))
 }
 
-func chips() ui.Drawable {
+func chips() ui.Node {
 	l := widget.NewList()
 	ui.Add(l,
 		caption("Difficulty"),
@@ -132,7 +132,7 @@ func chips() ui.Drawable {
 // flex lays three boxes out in a row, with chips below switching the row's
 // main alignment and making the middle box grow. The boxes glide to their
 // new places.
-func flex() ui.Drawable {
+func flex() ui.Node {
 	t := ui.CurrentTheme
 	small := widget.Font(t.SmallFont)
 	row := ui.NewRow(ui.Gap(2), ui.Padding(ui.XY(4, 2)))
@@ -162,7 +162,7 @@ func flex() ui.Drawable {
 }
 
 // grid is a PIN pad: twelve buttons in three equal columns.
-func grid() ui.Drawable {
+func grid() ui.Node {
 	t := ui.CurrentTheme
 	small := widget.Font(t.SmallFont)
 	const prompt = "Enter a PIN"
@@ -198,7 +198,7 @@ func grid() ui.Drawable {
 // scrolls shows two shelves of maps that scroll sideways, like a TV menu:
 // up and down pick a shelf, left and right move along it, and the cards
 // follow the cursor as a wave.
-func scrolls() ui.Drawable {
+func scrolls() ui.Node {
 	small := widget.Font(ui.CurrentTheme.SmallFont)
 	playing := widget.NewLabel("Pick a map", small, ui.Padding(ui.XY(4, 1)))
 	shelves := []struct {
@@ -224,13 +224,13 @@ func scrolls() ui.Drawable {
 	return Page("Scroll", ui.NewColumn(ui.Children(playing, l)))
 }
 
-func inputs() ui.Drawable {
+func inputs() ui.Node {
 	l := padded()
 	ui.Add(l, widget.NewInput("Name"), widget.NewInput("Password"))
 	return Page("Input", l)
 }
 
-func longText() ui.Drawable {
+func longText() ui.Node {
 	t := ui.CurrentTheme
 	l := widget.NewList()
 	ui.Add(l,

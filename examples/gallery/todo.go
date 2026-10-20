@@ -11,7 +11,7 @@ import (
 // todos is a to-do list made only of stock widgets. The field on top adds a
 // task, OK on a task checks it off, and its Edit button opens a sheet to
 // rename it or, held, to delete it.
-func todos() ui.Drawable {
+func todos() ui.Node {
 	t := ui.CurrentTheme
 	tl := &todoList{
 		list: padded(),
@@ -65,7 +65,7 @@ func (tl *todoList) add(text string) {
 	tl.refresh()
 }
 
-func (tl *todoList) edit(row ui.Drawable, task *widget.CheckBox) {
+func (tl *todoList) edit(row ui.Node, task *widget.CheckBox) {
 	t := ui.CurrentTheme
 	header := widget.NewLabel(task.Title().Text(), widget.Font(t.SmallFont),
 		ui.Padding(ui.XY(2, 0)))

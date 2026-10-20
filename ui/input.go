@@ -86,23 +86,23 @@ const dragSlop = 4
 type InputManager struct {
 	queue chan event
 	subs  []func(*KeyEvent) bool
-	owner [keyCount]Drawable
+	owner [keyCount]Node
 	// nav marks keys the framework took on Press: arrows for focus
 	// movement and Back for the screen stack.
 	nav      [keyCount]bool
 	repeated [keyCount]bool
-	path     []Drawable
+	path     []Node
 
 	ptrDown    bool
 	ptrStart   PointerEvent
-	ptrHit     Drawable
-	ptrPressed Drawable
+	ptrHit     Node
+	ptrPressed Node
 	ptrCapture PointerHandler
 }
 
 func (m *InputManager) init() {
 	m.queue = make(chan event, 32)
-	m.path = make([]Drawable, 0, 32)
+	m.path = make([]Node, 0, 32)
 }
 
 // Emit queues a key event. Safe to call from any goroutine.
@@ -221,13 +221,13 @@ func (m *InputManager) unclaimed(e *KeyEvent) {
 	}
 }
 
-func (m *InputManager) claim(e KeyEvent, n Drawable) {
+func (m *InputManager) claim(e KeyEvent, n Node) {
 	if e.Phase == Press {
 		m.owner[e.Key] = n
 	}
 }
 
-func deliver(n Drawable, e *KeyEvent) {
+func deliver(n Node, e *KeyEvent) {
 	if p, ok := n.(KeyPreviewer); ok && p.PreviewKey(e) {
 		return
 	}
@@ -237,7 +237,7 @@ func deliver(n Drawable, e *KeyEvent) {
 }
 
 // forget drops every reference into a subtree that is leaving the tree.
-func (m *InputManager) forget(d Drawable) {
+func (m *InputManager) forget(d Node) {
 	for k, o := range m.owner {
 		if o != nil && IsAncestor(d, o) {
 			m.owner[k] = nil
@@ -305,7 +305,7 @@ func (m *InputManager) offer(e *PointerEvent) PointerHandler {
 	return nil
 }
 
-func focusableAncestor(d Drawable) Drawable {
+func focusableAncestor(d Node) Node {
 	for n := d; n != nil; n = n.box().parent {
 		if n.box().Focusable() {
 			return n

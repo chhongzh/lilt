@@ -54,7 +54,7 @@ func (g *Grid) columnWidths(avail float32) {
 
 // rows walks visible children a row at a time, measuring each and calling
 // place once the row's height is known.
-func (g *Grid) rows(maxH float32, place func(row []Drawable, y, h float32)) float32 {
+func (g *Grid) rows(maxH float32, place func(row []Node, y, h float32)) float32 {
 	var y float32
 	start, col := 0, 0
 	var h float32
@@ -96,7 +96,7 @@ func (g *Grid) MeasureChildren(max Vec2) Vec2 {
 
 func (g *Grid) ArrangeChildren(content Rect) {
 	g.columnWidths(content.W)
-	g.rows(content.H, func(row []Drawable, y, h float32) {
+	g.rows(content.H, func(row []Node, y, h float32) {
 		x := content.X
 		col := 0
 		for _, c := range row {
