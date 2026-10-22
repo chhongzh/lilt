@@ -38,6 +38,7 @@ type layer struct {
 	Box
 	content Node
 	kind    Popup
+	frame   Rect // a popup's outline, around its content and padding
 	focus   Node // restored when the layer above closes
 	placed  bool // the entrance, which needs a laid-out content, has begun
 	exiting bool
@@ -52,7 +53,10 @@ func (l *layer) ArrangeChildren(r Rect) {
 		Arrange(l.content, r)
 		return
 	}
-	Arrange(l.content, l.place(r))
+	l.frame = l.place(r)
+	p := l.inset()
+	f := l.frame
+	Arrange(l.content, Rect{f.X + p.Left, f.Y + p.Top, f.W - p.Horizontal(), f.H - p.Vertical()})
 	if !l.placed {
 		l.placed = true
 		dx, dy := l.away()
@@ -63,26 +67,49 @@ func (l *layer) ArrangeChildren(r Rect) {
 	}
 }
 
-// place sizes a popup's content and pins it to its edge or the middle.
+// inset is the room between a popup's frame and its content. A drawer's
+// frame runs off screen along its edge, so that side needs none.
+func (l *layer) inset() Insets {
+	p := CurrentTheme.PanelPadding.Scale(Unit())
+	switch l.kind {
+	case DrawerBottom:
+		p.Bottom = 0
+	case DrawerTop:
+		p.Top = 0
+	case DrawerLeft:
+		p.Left = 0
+	case DrawerRight:
+		p.Right = 0
+	}
+	return p
+}
+
+// fit is the frame size a popup needs in room: its content plus the inset.
+func (l *layer) fit(room Vec2) Vec2 {
+	p := l.inset()
+	s := Measure(l.content, shrink(room, p))
+	return Vec2{min(s.X+p.Horizontal(), room.X), min(s.Y+p.Vertical(), room.Y)}
+}
+
+// place sizes a popup's frame and pins it to its edge or the middle.
 func (l *layer) place(r Rect) Rect {
 	switch l.kind {
 	case DrawerBottom, DrawerTop:
-		h := min(Measure(l.content, Vec2{r.W, r.H}).Y, r.H)
+		h := l.fit(Vec2{r.W, r.H}).Y
 		if l.kind == DrawerTop {
 			return Rect{r.X, r.Y, r.W, h}
 		}
 		return Rect{r.X, r.Bottom() - h, r.W, h}
 	case DrawerLeft, DrawerRight:
-		w := min(Measure(l.content, Vec2{r.W, r.H}).X, r.W)
+		w := l.fit(Vec2{r.W, r.H}).X
 		if l.kind == DrawerLeft {
 			return Rect{r.X, r.Y, w, r.H}
 		}
 		return Rect{r.Right() - w, r.Y, w, r.H}
 	}
 	m := popupMargin * Unit()
-	room := Vec2{r.W - 2*m, r.H - 2*m}
-	s := Measure(l.content, room)
-	w, h := min(s.X, room.X), min(s.Y, room.Y)
+	s := l.fit(Vec2{r.W - 2*m, r.H - 2*m})
+	w, h := s.X, s.Y
 	x := r.X + (r.W-w)/2
 	if l.kind == Toast {
 		return Rect{x, r.Bottom() - m - h, w, h}
@@ -93,7 +120,7 @@ func (l *layer) place(r Rect) Rect {
 // away is the offset that carries the layer just off screen, the way it
 // came in and leaves.
 func (l *layer) away() (dx, dy float32) {
-	c := l.content.box().rect
+	c := l.frame
 	w, h := float32(scrW), float32(scrH)
 	switch l.kind {
 	case fullPage:
@@ -127,7 +154,7 @@ func (l *layer) Draw(c gfx.Canvas) {
 		c.FillRect(gfx.Rect{W: Round(l.rect.W), H: Round(l.rect.H)}, t.Background)
 		return
 	}
-	r := l.content.box().rect.Pixels()
+	r := l.frame.Pixels()
 	rad := radiusPx(t.Radius)
 	if l.kind <= DrawerRight {
 		// A drawer's frame runs past its edge, so only the inner corners show.

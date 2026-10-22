@@ -117,7 +117,7 @@ lilt.Start(gfx.FromDisplayer(dev), home)
 ## 渲染与布局
 
 - 任何属性变化都会标记重新布局，下一帧整树重排。
-- Padding、Margin、Gap 和圆角都以单位计：一个单位等于主题字体行高除以默认字体行高。默认字体下一个单位就是一像素，换大字体时间距一起放大。行、输入框、按钮的内边距统一取自主题（`RowPadding`、`ButtonPadding`、`Gap`）。
+- Padding、Margin、Gap 和圆角都以单位计：一个单位等于主题字体行高除以默认字体行高。默认字体下一个单位就是一像素，换大字体时间距一起放大。行、输入框、按钮的内边距统一取自主题（`RowPadding`、`ButtonPadding`、`Gap`）；弹窗和带边框的面板与边框之间留 `PanelPadding`，抽屉贴着的那条边除外。
 - 有变化时整屏重绘，不做脏矩形。
 - 每帧不分配内存。
 - 只用 float32，不依赖 `strings` 包。

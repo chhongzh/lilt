@@ -28,7 +28,6 @@ type Drawer struct {
 func NewDrawer(edge Edge, title string, opts ...ui.Option) *Drawer {
 	d := &Drawer{edge: edge}
 	d.SetAxis(ui.Vertical)
-	d.SetPadding(ui.LTRB(0, 2, 0, 1))
 	if title != "" {
 		t := ui.CurrentTheme
 		d.title = NewLabel(title, Font(t.SmallFont), TextColor(t.Muted), ui.Padding(t.RowPadding))

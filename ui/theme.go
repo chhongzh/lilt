@@ -26,6 +26,9 @@ type Theme struct {
 	ButtonPadding Insets
 	// Gap separates stacked controls in drawers, dialogs and padded lists.
 	Gap float32
+	// PanelPadding keeps controls clear of a frame drawn around them: every
+	// popup's, and any bordered panel's.
+	PanelPadding Insets
 }
 
 // CurrentTheme defaults to light-on-dark, which suits OLED panels.
@@ -41,6 +44,7 @@ var CurrentTheme = &Theme{
 	RowPadding:    XY(4, 1),
 	ButtonPadding: XY(6, 2),
 	Gap:           2,
+	PanelPadding:  All(2),
 }
 
 // Cursor motion. The edge on the side of travel eases with CursorLead and

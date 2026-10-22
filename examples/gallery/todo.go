@@ -70,8 +70,7 @@ func (tl *todoList) add(text string) {
 }
 
 func (tl *todoList) edit(row ui.Node, task *widget.CheckBox) {
-	d := widget.NewDrawer(widget.Bottom, task.Title().Text(), ui.Gap(2),
-		ui.Padding(ui.LTRB(2, 2, 2, 2)))
+	d := widget.NewDrawer(widget.Bottom, task.Title().Text(), ui.Gap(ui.CurrentTheme.Gap))
 	rename := widget.NewButton("Rename", widget.OnClick(func() {
 		ui.Do(func() {
 			d.Close()

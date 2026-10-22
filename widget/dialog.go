@@ -22,7 +22,6 @@ func NewDialog(title, message string, buttons ...*Button) *Dialog {
 	}
 	d.SetAxis(ui.Vertical)
 	d.SetGap(t.Gap)
-	d.SetPadding(ui.All(3))
 	d.SetWidth(ui.Rel(1))
 	for _, b := range buttons {
 		b.SetGrow(1)

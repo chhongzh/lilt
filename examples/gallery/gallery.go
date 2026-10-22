@@ -287,8 +287,12 @@ func nested() ui.Node {
 	small := widget.Font(t.SmallFont)
 	picked := widget.NewLabel("Pick a cell", small, ui.Padding(t.RowPadding))
 
+	// A bordered panel keeps its rows clear of the border, with room on the
+	// right for the thumb as every list has.
+	inset := t.PanelPadding
+	inset.Right += 3
 	inbox := widget.NewList(ui.Height(ui.Px(40)), ui.Border(t.Foreground), ui.Radius(t.Radius),
-		ui.Margin(ui.XY(2, 0)), ui.Padding(ui.LTRB(1, 1, 3, 1)))
+		ui.Margin(ui.XY(2, 0)), ui.Padding(inset))
 	for i := 1; i <= 8; i++ {
 		ui.Add(inbox, widget.NewListItem("Message "+strconv.Itoa(i), small))
 	}

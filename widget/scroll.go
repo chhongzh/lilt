@@ -383,13 +383,18 @@ func (s *Scroll) DrawOver(c gfx.Canvas) {
 	r := s.Rect()
 	in := s.ContentRect()
 	col := ui.CurrentTheme.Foreground
+	// The thumbs run along the far edges, inside a border if there is one.
+	edge := float32(1)
+	if s.Bordered() {
+		edge = 2
+	}
 	if s.on(1) && s.limit[1] > 0 {
 		lo, size := thumb(s.thumb[1].Get(), s.limit[1], s.view[1])
-		c.VLine(ui.Round(r.W-1), ui.Round(in.Y+lo), ui.Round(size), col)
+		c.VLine(ui.Round(r.W-edge), ui.Round(in.Y+lo), ui.Round(size), col)
 	}
 	if s.on(0) && s.limit[0] > 0 {
 		lo, size := thumb(s.thumb[0].Get(), s.limit[0], s.view[0])
-		c.HLine(ui.Round(in.X+lo), ui.Round(r.H-1), ui.Round(size), col)
+		c.HLine(ui.Round(in.X+lo), ui.Round(r.H-edge), ui.Round(size), col)
 	}
 }
 

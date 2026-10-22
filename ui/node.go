@@ -215,6 +215,9 @@ func (b *Box) SetBackground(c gfx.Color) {
 	Invalidate()
 }
 
+// Bordered reports whether the node strokes an outline.
+func (b *Box) Bordered() bool { return b.flags&flagBorder != 0 }
+
 // SetBorder strokes a one-pixel outline in c.
 func (b *Box) SetBorder(c gfx.Color) {
 	b.border = c
