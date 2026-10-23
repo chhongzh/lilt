@@ -124,8 +124,11 @@ def check_code():
 
     step("go mod tidy")
     run("go", "mod", "tidy")
-    if run("git", "status", "--porcelain", "go.mod", "go.sum"):
-        run("git", "checkout", "--", "go.mod", "go.sum")
+    # git diff compares content after line-ending conversion; git status
+    # would also flag tidy rewriting a CRLF checkout with LF.
+    tidy = subprocess.run(["git", "diff", "--quiet", "go.mod", "go.sum"], cwd=ROOT).returncode == 0
+    run("git", "checkout", "--", "go.mod", "go.sum")
+    if not tidy:
         raise ReleaseError("go.mod or go.sum is not tidy; run `go mod tidy` and commit")
 
     step("go vet")
