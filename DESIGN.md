@@ -12,14 +12,14 @@ TinyGo GUI Framework 设计需求文档
     - 组件通过嵌入（Go 的继承）复用实现：所有节点嵌入 `ui.Box`；行类组件嵌入 `ListItem`，`CheckBox`、`Radio`、`Select` 都建立在它上面；可交互组件额外嵌入 `widget.Control`，从而获得事件和状态机。
 - 核心接口（`ui` 包）：
 
-| 原需求里的名字 | 现在的名字 | 作用 |
-| --- | --- | --- |
-| （节点本身） | `Node` | 树里的任何东西。只有嵌入了 `Box` 的类型才满足它 |
-| Drawable | `Painter` / `OverPainter` | 在子节点之前 / 之后绘制自己 |
-| Updatable | `Updater` | 每帧推进一次逻辑，`Update(dt)` |
-| Position | `Box` 的 `Anchor`、`Origin`、`Position`、`OffsetX/Y` | 相对父节点的位置，加上可动画的偏移 |
-| Rect | `ui.Rect`（布局，float32）/ `gfx.Rect`（像素） | 节点的布局矩形，也是点击和焦点查找用的范围 |
-| （测量） | `Measurer` / `Layouter` | 叶子报告内容尺寸 / 容器自己摆放子节点（Flex、Grid） |
+|  名字 | 作用 |
+| --- | --- |
+|  `Node` | 树里的任何东西。只有嵌入了 `Box` 的类型才满足它 |
+| `Painter` / `OverPainter` | 在子节点之前 / 之后绘制自己 |
+|  `Updater` | 每帧推进一次逻辑，`Update(dt)` |
+| `Box` 的 `Anchor`、`Origin`、`Position`、`OffsetX/Y` | 相对父节点的位置，加上可动画的偏移 |
+|  `ui.Rect`（布局，float32）/ `gfx.Rect`（像素） | 节点的布局矩形，也是点击和焦点查找用的范围 |
+| `Measurer` / `Layouter` | 叶子报告内容尺寸 / 容器自己摆放子节点（Flex、Grid） |
 
 - 其余能力接口：`KeyHandler`、`KeyPreviewer`、`PointerHandler`、`Focuser`、`Revealer`、`ArrowScroller`、`CursorShaper`、`ContentHost`、`Leaf`、`ChildRemover`。
 - `widget` 包的选项同样按能力匹配：`Font` 作用于任何 `FontSetter`，`TextColor` 作用于任何 `Colorer`，`OnClick` / `OnChange` 作用于任何嵌入了 `Control` 的组件。
@@ -31,18 +31,18 @@ TinyGo GUI Framework 设计需求文档
 - `lilt.Pause()`：停止更新和绘制，状态保留。
 - `lilt.Stop()`：结束 UI goroutine，丢弃所有屏幕，之后可以重新 Start。
 
-管理器（原需求名 → 现在的名字）：
+管理器：
 
-| 原需求里的名字 | 现在的名字 | 职责 |
-| --- | --- | --- |
-| ViewManager | 层栈中的页面，`ui.Push` / `ui.Pop` | 整页的导航栈，统一处理飞入飞出（通过 Offset） |
-| （新增）DialogManager | 层栈中的弹窗，`ui.Open` / `ui.Close` | 统一的弹窗能力：四个方向的 Drawer、居中 Dialog、不抢焦点的 Toast |
-| FocusManager | 焦点管理（`ui.SetFocus` / `ui.Focused`） | 焦点的获取、丢失与传递 |
-| DisplayManager | `gfx.Screen` | 显示输出接口，驱动实现它即可接入 |
-| RenderManager | 帧循环（`lilt` 包驱动） | 输入、更新、动画、布局、绘制，每帧按此顺序 |
-| InputManager | 输入管线（`ui.Emit` / `EmitRune` / `EmitPointer`） | 统一的输入入口，任何 goroutine 都能调用 |
-| Keyboard | `ui.TextInputMethod`，默认 `widget.Keyboard` | 文本输入的统一抽象，软键盘只是其中一种实现 |
-| （新增） | `ui.KeyPoller` | 把原始引脚电平变成消抖后的按下、连发、松开 |
+|现在的名字 | 职责 |
+|--- | --- |
+| 层栈中的页面，`ui.Push` / `ui.Pop` | 整页的导航栈，统一处理飞入飞出（通过 Offset） |
+|  层栈中的弹窗，`ui.Open` / `ui.Close` | 统一的弹窗能力：四个方向的 Drawer、居中 Dialog、不抢焦点的 Toast |
+| 焦点管理（`ui.SetFocus` / `ui.Focused`） | 焦点的获取、丢失与传递 |
+|  `gfx.Screen` | 显示输出接口，驱动实现它即可接入 |
+| 帧循环（`lilt` 包驱动） | 输入、更新、动画、布局、绘制，每帧按此顺序 |
+|  输入管线（`ui.Emit` / `EmitRune` / `EmitPointer`） | 统一的输入入口，任何 goroutine 都能调用 |
+|  `ui.TextInputMethod`，默认 `widget.Keyboard` | 文本输入的统一抽象，软键盘只是其中一种实现 |
+|  `ui.KeyPoller` | 把原始引脚电平变成消抖后的按下、连发、松开 |
 
 框架与硬件无关：用户自己读引脚，再调用 Emit 或 KeyPoller 交给框架。
 
