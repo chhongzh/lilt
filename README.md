@@ -29,11 +29,11 @@ go get github.com/chhongzh/lilt@latest
 ```
 
 > [!WARNING]
-> lilt 还在 0.x 阶段，迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动。升级前先读 [CHANGELOG.md](CHANGELOG.md)，并常来看看 [Releases](https://github.com/chhongzh/lilt/releases) 里的新版本。`go list -m -u github.com/chhongzh/lilt` 可以查看有没有更新的版本。
+> lilt 还在 0.x 阶段，迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动。每个版本改了什么写在 [Releases](https://github.com/chhongzh/lilt/releases) 里，升级前先读一遍，也常来看看有没有新版本。`go list -m -u github.com/chhongzh/lilt` 可以查看有没有更新的版本。
 
 ## 文档
 
-完整文档在 <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)，每个版本的变化见 [CHANGELOG.md](CHANGELOG.md)。
+完整文档在 <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
 
 ## 包
 
