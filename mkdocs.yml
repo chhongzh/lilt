@@ -8,6 +8,8 @@ copyright: MIT License
 
 theme:
   name: material
+  # Holds the announcement bar in main.html.
+  custom_dir: overrides
   language: zh
   # System fonts: Google Fonts is slow or blocked for many readers.
   font: false
@@ -33,6 +35,7 @@ theme:
         icon: material/brightness-4
         name: 跟随系统
   features:
+    - announce.dismiss
     - navigation.instant
     - navigation.instant.progress
     - navigation.tracking
@@ -146,3 +149,4 @@ nav:
       - anim: reference/anim.md
       - gfx: reference/gfx.md
   - 在线体验: play.md
+  - 更新日志: changelog.md

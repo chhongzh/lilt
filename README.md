@@ -5,7 +5,9 @@
 <p align='center'><strong>给 TinyGo 用的 GUI 框架，所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。</strong></p>
 
 <p align='center'>
+  <a href='https://github.com/chhongzh/lilt/releases' target='_blank'><img src='https://img.shields.io/github/v/release/chhongzh/lilt?include_prereleases&sort=semver' alt='Release'></a>
   <a href='https://pkg.go.dev/github.com/chhongzh/lilt' target='_blank'><img src='https://pkg.go.dev/badge/github.com/chhongzh/lilt' alt='Go Reference'></a>
+  <a href='https://github.com/chhongzh/lilt/actions/workflows/ci.yml' target='_blank'><img src='https://github.com/chhongzh/lilt/actions/workflows/ci.yml/badge.svg' alt='CI'></a>
   <a href='https://github.com/chhongzh/lilt/actions/workflows/docs.yml' target='_blank'><img src='https://github.com/chhongzh/lilt/actions/workflows/docs.yml/badge.svg' alt='Docs Build'></a>
   <a href='LICENSE' target='_blank'><img src='https://img.shields.io/github/license/chhongzh/lilt' alt='License'></a>
 </p>
@@ -18,13 +20,20 @@
 
 框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。手感参照 osu!lazer 和 iOS，模块路径是 `github.com/chhongzh/lilt`。上面这张动图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
 
+## 安装
+
+需要 Go 1.27 及以上，编译到单片机还需要 TinyGo 0.42 及以上。
+
+```sh
+go get github.com/chhongzh/lilt@latest
+```
+
+> [!WARNING]
+> lilt 还在 0.x 阶段，迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动。升级前先读 [CHANGELOG.md](CHANGELOG.md)，并常来看看 [Releases](https://github.com/chhongzh/lilt/releases) 里的新版本。`go list -m -u github.com/chhongzh/lilt` 可以查看有没有更新的版本。
+
 ## 文档
 
-Go to <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
-
-## 最低 Go 版本
-
-Use `go 1.27` and above。
+完整文档在 <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)，每个版本的变化见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 包
 
@@ -204,7 +213,7 @@ png.Encode(f, scr.Image(4)) // 截一张图
 
 ## 贡献
 
-欢迎提交 Pull Request。
+欢迎提交 Pull Request，请基于 `dev` 分支。`main` 只放已发布的版本，发布流程见 [RELEASING.md](RELEASING.md)。
 
 ## 许可证
 

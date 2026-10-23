@@ -9,9 +9,31 @@
 | Go | 1.27 及以上 | lilt 用到了泛型方法 |
 | TinyGo | 0.42 及以上 | 编译到单片机 |
 
+## 安装
+
+在你的模块里运行：
+
 ```bash
-go get github.com/chhongzh/lilt
+go get github.com/chhongzh/lilt@latest
 ```
+
+`@latest` 取最新的正式版本。想固定在某个版本，就把它换成版本号：
+
+```bash
+go get github.com/chhongzh/lilt@v0.1.0
+```
+
+所有已发布的版本见 [GitHub Releases](https://github.com/chhongzh/lilt/releases)，每个版本改了什么见[更新日志](changelog.md)。
+
+!!! warning "lilt 还在 0.x 阶段"
+
+    lilt 迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动，补丁版本只修 bug。`go.mod` 会记下你用的确切版本，只有你自己运行 `go get` 才会升级；升级前先读更新日志，并定期看看有没有新版本：
+
+    ```bash
+    go list -m -u github.com/chhongzh/lilt
+    ```
+
+    这条命令会显示当前用的版本，以及有没有更新的版本可以升级。
 
 ## 第一个界面
 
