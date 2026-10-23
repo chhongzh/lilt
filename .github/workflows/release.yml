@@ -1,0 +1,50 @@
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # The release notes are the CHANGELOG section for this tag, so a tag
+      # without one fails here instead of publishing an empty release.
+      - name: release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v head="## [$version]" '
+            index($0, head) == 1 { found = 1; next }
+            found && index($0, "## [") == 1 { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "$GITHUB_REF_NAME" in
+            *-*) flags="--prerelease" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag $flags
+
+      # Asking the module proxy for the new version makes pkg.go.dev list it
+      # without waiting for someone to `go get` it first.
+      - name: announce to the Go module proxy
+        run: curl -fsS "https://proxy.golang.org/github.com/chhongzh/lilt/@v/${GITHUB_REF_NAME}.info"

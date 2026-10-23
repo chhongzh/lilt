@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - "docs/**"
+      - "overrides/**"
+      - "CHANGELOG.md"
       - "mkdocs.yml"
       - "cmd/docgif/**"
       - "internal/reel/**"
