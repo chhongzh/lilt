@@ -1,6 +1,6 @@
 # lilt
 
-lilt：一个`osu!framework` like的给tinygo用的gui框架，实现非常丝滑的视觉效果。
+Lilt 是一个专为 `TinyGo` 打造的 `osu!lazer` like 的 GUI 框架，致力于实现极致丝滑的视觉效果。
 
 ## 代码质量要求
 
