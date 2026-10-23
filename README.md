@@ -16,7 +16,7 @@
 
 ## 简介
 
-框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。手感参照 osu!framework 和 iOS，模块路径是 `github.com/chhongzh/lilt`。上面这张动图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
+框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。手感参照 osu!lazer 和 iOS，模块路径是 `github.com/chhongzh/lilt`。上面这张动图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
 
 ## 文档
 
