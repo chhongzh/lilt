@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+  # release.yml runs the same checks before it publishes a tag.
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      # driver/sh1106 and examples/esp32s3-generic import machine, so they
+      # are left to the TinyGo step below.
+      - name: vet
+        run: |
+          go vet . ./anim ./gfx ./ui ./widget ./driver/silent ./examples/gallery \
+            ./cmd/preview ./cmd/docgif ./internal/...
+          GOOS=js GOARCH=wasm go vet ./driver/desktop ./cmd/sim
+
+  tinygo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: install TinyGo
+        env:
+          TINYGO_VERSION: "0.42.0"
+        run: |
+          wget -q "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo_${TINYGO_VERSION}_amd64.deb"
+          sudo dpkg -i "tinygo_${TINYGO_VERSION}_amd64.deb"
+          tinygo version
+
+      - name: build firmware
+        run: tinygo build -target esp32s3-generic -o gallery.bin ./examples/esp32s3-generic
