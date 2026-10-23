@@ -9,15 +9,14 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
-	"image/gif"
 	"image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/chhongzh/lilt/driver/silent"
 	"github.com/chhongzh/lilt/examples/gallery"
-	"github.com/chhongzh/lilt/gfx"
 	"github.com/chhongzh/lilt/internal/core"
 	"github.com/chhongzh/lilt/ui"
 )
@@ -29,72 +28,6 @@ const (
 	// slow down any shorter GIF delay.
 	gifEvery = 2
 )
-
-var palette = color.Palette{
-	color.RGBA{8, 10, 14, 255},
-	color.RGBA{200, 230, 255, 255},
-}
-
-// screen is a one-bit frame buffer, like the OLED it stands in for.
-type screen struct{ px [width * height]bool }
-
-func (s *screen) Size() (w, h int16) { return width, height }
-
-func (s *screen) SetPixel(x, y int16, c gfx.Color) {
-	if x >= 0 && y >= 0 && x < width && y < height {
-		s.px[int(y)*width+int(x)] = gfx.IsLit(c)
-	}
-}
-
-func (s *screen) FillRect(x, y, w, h int16, c gfx.Color) {
-	on := gfx.IsLit(c)
-	s.each(x, y, w, h, func(i int) { s.px[i] = on })
-}
-
-func (s *screen) InvertRect(x, y, w, h int16) {
-	s.each(x, y, w, h, func(i int) { s.px[i] = !s.px[i] })
-}
-
-func (s *screen) each(x, y, w, h int16, fn func(i int)) {
-	x0, y0 := max(x, 0), max(y, 0)
-	x1, y1 := min(x+w, width), min(y+h, height)
-	for j := y0; j < y1; j++ {
-		for i := x0; i < x1; i++ {
-			fn(int(j)*width + int(i))
-		}
-	}
-}
-
-func (s *screen) Flush() error { return nil }
-
-func (s *screen) image(scale int) *image.Paletted {
-	return s.region(image.Rect(0, 0, width, height), scale)
-}
-
-// region renders the screen pixels in r, scaled, placed where they sit in
-// the full image so a GIF frame can carry just the part that changed.
-func (s *screen) region(r image.Rectangle, scale int) *image.Paletted {
-	img := image.NewPaletted(image.Rect(r.Min.X*scale, r.Min.Y*scale, r.Max.X*scale, r.Max.Y*scale), palette)
-	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
-		for x := img.Rect.Min.X; x < img.Rect.Max.X; x++ {
-			if s.px[(y/scale)*width+x/scale] {
-				img.Pix[img.PixOffset(x, y)] = 1
-			}
-		}
-	}
-	return img
-}
-
-// changed is the bounding box of the pixels that differ between a and b.
-func changed(a, b []bool) image.Rectangle {
-	var r image.Rectangle
-	for i := range a {
-		if a[i] != b[i] {
-			r = r.Union(image.Rect(i%width, i/width, i%width+1, i/width+1))
-		}
-	}
-	return r
-}
 
 type step struct {
 	at    float32
@@ -437,17 +370,16 @@ func main() {
 		fail(err)
 	}
 
-	scr := &screen{}
+	scr := silent.New(width, height)
 	core.Boot(scr, gallery.Home())
 	sc, name := timeline(), "session.gif"
 	if *reel {
 		sc, name = highlights(), "highlight.gif"
 	}
 
-	var anim gif.GIF
+	rec := &silent.Recorder{Scale: *scale}
 	var shots []*image.Paletted
 	var names []string
-	var last []bool
 	dt := float32(1) / fps
 	start := time.Now()
 	next := 0
@@ -461,7 +393,7 @@ func main() {
 			if st.shot != "" {
 				// The buffer still shows the last frame, before any key
 				// emitted at the same moment takes effect.
-				shots = append(shots, scr.image(3))
+				shots = append(shots, scr.Image(3))
 				names = append(names, st.shot)
 			} else {
 				ui.Emit(st.key, st.phase)
@@ -472,23 +404,7 @@ func main() {
 			fail(err)
 		}
 		if frame%gifEvery == 0 {
-			delay := 100 * gifEvery / fps
-			var r image.Rectangle
-			if last == nil {
-				r = image.Rect(0, 0, width, height)
-			} else {
-				r = changed(last, scr.px[:])
-			}
-			if r.Empty() {
-				anim.Delay[len(anim.Delay)-1] += delay
-			} else {
-				// Frames are drawn over the previous one, so only the
-				// change needs to be stored.
-				anim.Image = append(anim.Image, scr.region(r, *scale))
-				anim.Delay = append(anim.Delay, delay)
-				anim.Disposal = append(anim.Disposal, gif.DisposalNone)
-				last = append(last[:0], scr.px[:]...)
-			}
+			rec.Capture(scr, 100*gifEvery/fps)
 		}
 		// Pace to the wall clock; see the package comment.
 		if ahead := time.Duration(t*float32(time.Second)) - time.Since(start); ahead > 0 {
@@ -496,15 +412,15 @@ func main() {
 		}
 	}
 
-	write(filepath.Join(*out, name), func(f *os.File) error { return gif.EncodeAll(f, &anim) })
+	write(filepath.Join(*out, name), rec.Encode)
 	if len(shots) > 0 {
 		sheet := contactSheet(shots)
-		write(filepath.Join(*out, "shots.png"), func(f *os.File) error { return png.Encode(f, sheet) })
+		write(filepath.Join(*out, "shots.png"), func(w io.Writer) error { return png.Encode(w, sheet) })
 	}
 	for i, n := range names {
 		fmt.Printf("%2d %s\n", i+1, n)
 	}
-	fmt.Printf("%d gif frames, %d shots\n", len(anim.Image), len(shots))
+	fmt.Printf("%d gif frames, %d shots\n", rec.Frames(), len(shots))
 }
 
 // contactSheet lays shots out four to a row, left to right.
@@ -530,7 +446,7 @@ func contactSheet(shots []*image.Paletted) *image.RGBA {
 	return sheet
 }
 
-func write(path string, enc func(*os.File) error) {
+func write(path string, enc func(io.Writer) error) {
 	f, err := os.Create(path)
 	if err != nil {
 		fail(err)
