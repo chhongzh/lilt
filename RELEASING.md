@@ -1,6 +1,10 @@
 # 发布流程
 
-这份文档写给维护者，说明怎么从 `dev` 发出一个新版本。
+这份文档写给维护者，说明怎么从 `dev` 发出一个新版本。日常只需要一条命令：
+
+```bash
+python scripts/release.py v0.2.0
+```
 
 ## 分支
 
@@ -18,95 +22,72 @@
 | 只修 bug，API 不变 | 补丁版本 | `v0.2.0` → `v0.2.1` |
 | 想先让人试用 | 预发布后缀 | `v0.3.0-rc.1` |
 
-预发布 tag 带 `-` 后缀，release workflow 会把它标成 pre-release，`go get ...@latest` 也不会选中它。
+预发布 tag 带 `-` 后缀，GitHub Release 会标成 pre-release，`go get ...@latest` 也不会选中它。
 
-## 步骤
+## 提交信息
 
-下面以 `v0.2.0` 为例，换成实际的版本号。
+发布说明由 [GoReleaser](https://goreleaser.com) 从上一个 tag 以来的提交生成，所以提交信息要遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)。规则写在 [.goreleaser.yaml](.goreleaser.yaml)：
 
-### 1. 在 dev 上准备
+| 前缀 | 进发布说明的哪一组 |
+| --- | --- |
+| `feat:`、`feat(ui):` | 新功能 |
+| `fix:` | 修复 |
+| `perf:` | 性能 |
+| `refactor:` | 重构 |
+| 类型后加 `!`，如 `feat(ui)!:` | 不兼容的改动，排在最前 |
+| `docs:`、`chore:`、`ci:`、`test:`、`style:`、合并提交 | 不出现 |
+| 其他 | 其他 |
 
-把 [CHANGELOG.md](CHANGELOG.md) 里 `[Unreleased]` 下的条目移到新的版本标题下，写上日期，再更新文件底部的两个对比链接：
+提交信息就是用户看到的更新说明，写清楚改了什么，而不是改了哪个文件。不兼容的改动一定要带 `!`。
 
-```md
-## [Unreleased]
+## 发布
 
-## [0.2.0] - 2026-11-20
-
-### 变更
-
-- ...
-
-[Unreleased]: https://github.com/chhongzh/lilt/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/chhongzh/lilt/compare/v0.1.0...v0.2.0
-```
-
-标题必须是 `## [0.2.0]` 这个格式。release workflow 按它截取发布说明，找不到就失败。
-
-然后在本地跑一遍 CI 会跑的检查：
+在 `dev` 上，工作区干净、已经推送、CI 是绿的，然后：
 
 ```bash
-gofmt -l .
-go mod tidy && git diff --exit-code go.mod go.sum
-go vet . ./anim ./gfx ./ui ./widget ./driver/silent ./examples/gallery ./cmd/preview ./cmd/docgif ./internal/...
-GOOS=js GOARCH=wasm go vet ./driver/desktop ./cmd/sim
-tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
-scripts/docs.sh check
+python scripts/release.py v0.2.0 --dry-run
 ```
 
-都通过后提交：
+`--dry-run` 只做检查，打印这次会发布的提交和要执行的命令，什么都不改。确认无误后去掉 `--dry-run` 再跑一次，脚本会在推送前再问一次。
 
-```bash
-git commit -am "chore: release v0.2.0"
-git push origin dev
-```
+脚本依次：
 
-等 `dev` 上的 CI 变绿再继续。
+1. 检查版本号格式，并且比最新的 tag 大；
+2. 检查当前在 `dev`、工作区干净、和 `origin/dev` 一致、包含 `origin/main` 的全部提交、tag 还不存在；
+3. 跑 CI 会跑的检查：gofmt、`go mod tidy`、host 和 wasm 的 `go vet`，装了 TinyGo 就编一次固件，装了 GoReleaser 就校验配置；
+4. 用 `--no-ff` 把 `dev` 合并进 `main`，在合并提交上打注释 tag；
+5. 先推 `main`，再推 tag；
+6. 切回 `dev`，快进到 `main` 并推送，下次合并不会多出无关的差异。
 
-### 2. 合并到 main
+中途失败时，脚本会列出失败前已经完成的命令，按需手动收尾。
 
-用 `--no-ff` 保留一个合并提交，`main` 的历史里每个版本都是一个节点：
+推送之后的事由 GitHub Actions 完成：
+
+- 推 `main` 重新部署文档站；
+- 推 tag 触发 [release workflow](.github/workflows/release.yml)：跑完整 CI，GoReleaser 按上面的分组生成发布说明并创建 GitHub Release，最后请求一次 `proxy.golang.org`，让 pkg.go.dev 尽快收录。
+
+最后看一眼 [Releases](https://github.com/chhongzh/lilt/releases) 页面。发布说明可以在 GitHub 上直接编辑补充，比如写一段升级指南。
+
+## 手动发布
+
+没有 Python 时，脚本做的事等于下面这些命令：
 
 ```bash
 git switch main
-git pull --ff-only origin main
+git merge --ff-only origin/main
 git merge --no-ff dev -m "Merge branch 'dev' for v0.2.0"
-```
-
-### 3. 打 tag 并推送
-
-```bash
 git tag -a v0.2.0 -m "v0.2.0"
 git push origin main
 git push origin v0.2.0
-```
-
-推送 `main` 会重新部署文档站。推送 tag 会触发 [release workflow](.github/workflows/release.yml)，它依次：
-
-1. 跑完整的 CI；
-2. 从 CHANGELOG 截取 `[0.2.0]` 这一节作为发布说明，创建 GitHub Release；
-3. 请求一次 `proxy.golang.org`，让 pkg.go.dev 尽快收录新版本。
-
-### 4. 同步回 dev
-
-```bash
 git switch dev
 git merge --ff-only main
 git push origin dev
 ```
 
-这样 `dev` 也包含那个合并提交，下次合并不会多出无关的差异。
-
-### 5. 检查
-
-- GitHub 的 Releases 页面出现了新版本，说明和 CHANGELOG 一致；
-- `go list -m github.com/chhongzh/lilt@v0.2.0` 能查到；
-- 文档站已经更新。
-
 ## 出了问题
 
 - **已经推送的 tag 不要移动或删除。** module proxy 会永久缓存每个版本的内容，挪 tag 只会让不同的人拿到不同的代码。
-- 发出去的版本有严重问题时，修好后发一个新的补丁版本。必要时在 `go.mod` 里用 `retract` 标出坏版本，并在那次发布里一起推出去：
+- 发出去的版本有严重问题时，修好后发一个新的补丁版本。必要时在 `go.mod` 里用 `retract` 标出坏版本，并随那次发布一起推出去：
 
   ```go
   retract v0.2.0 // Select 打开后无法关闭，请用 v0.2.1
