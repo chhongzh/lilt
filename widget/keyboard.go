@@ -49,9 +49,8 @@ func (k *SoftKeyboard) Open(t ui.TextTarget) {
 	sheet := &kbSheet{k: k}
 	sheet.SetAxis(ui.Vertical)
 	sheet.SetGap(1)
-	sheet.SetPadding(ui.LTRB(2, 3, 2, 2))
 	ui.Add(sheet, k.preview, k.letters, k.digits)
-	ui.Push(sheet, ui.Sheet)
+	ui.Open(sheet, ui.DrawerBottom)
 	k.refresh()
 }
 

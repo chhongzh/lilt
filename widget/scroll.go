@@ -37,7 +37,7 @@ var waveSprings [waveSteps]anim.Spring
 // release.
 type Scroll struct {
 	ui.Box
-	content ui.Drawable
+	content ui.Node
 	axes    Axes
 
 	pos   [2]float32 // scroll distance, 0 at the start
@@ -56,14 +56,14 @@ type Scroll struct {
 	step      [2]float32
 }
 
-func NewScroll(content ui.Drawable, axes Axes, opts ...ui.Option) *Scroll {
+func NewScroll(content ui.Node, axes Axes, opts ...ui.Option) *Scroll {
 	s := &Scroll{}
 	s.init(content, axes)
 	ui.Apply(s, opts)
 	return s
 }
 
-func (s *Scroll) init(content ui.Drawable, axes Axes) {
+func (s *Scroll) init(content ui.Node, axes Axes) {
 	s.content, s.axes = content, axes
 	s.stagger = 0.2
 	s.SetClip(true)
@@ -81,7 +81,7 @@ func (s *Scroll) SetStagger(f float32) { s.stagger = f }
 func (s *Scroll) SetScrollBar(show bool) { s.hideBar = !show }
 
 // Content is where Add puts children.
-func (s *Scroll) Content() ui.Drawable { return s.content }
+func (s *Scroll) Content() ui.Node { return s.content }
 
 // ScrollPosition is the distance scrolled along x and y.
 func (s *Scroll) ScrollPosition() ui.Vec2 { return ui.Vec2{X: s.pos[0], Y: s.pos[1]} }
@@ -178,8 +178,8 @@ func (s *Scroll) wave(i int, d float32) {
 }
 
 // focusedChild is the index of the child holding the focus, or -1.
-func (s *Scroll) focusedChild(kids []ui.Drawable) int {
-	f := ui.Current().Focus.Current()
+func (s *Scroll) focusedChild(kids []ui.Node) int {
+	f := ui.Focused()
 	if f == nil {
 		return -1
 	}
@@ -192,7 +192,7 @@ func (s *Scroll) focusedChild(kids []ui.Drawable) int {
 }
 
 // restRect is d's resting rect in the content's coordinates.
-func (s *Scroll) restRect(d ui.Drawable) ui.Rect {
+func (s *Scroll) restRect(d ui.Node) ui.Rect {
 	b := ui.BoxOf(d)
 	r := b.Rect()
 	for n := b.Parent(); n != nil && n != s.content; n = ui.BoxOf(n).Parent() {
@@ -212,7 +212,7 @@ func span(r ui.Rect, i int) (lo, size float32) {
 	return r.Y, r.H
 }
 
-func (s *Scroll) Reveal(d ui.Drawable) {
+func (s *Scroll) Reveal(d ui.Node) {
 	if !ui.IsAncestor(s.content, d) {
 		return
 	}
@@ -222,10 +222,11 @@ func (s *Scroll) Reveal(d ui.Drawable) {
 			continue
 		}
 		lo, size := span(r, i)
+		m := revealMargin * ui.Unit()
 		if lo < s.pos[i] {
-			s.pos[i] = lo - revealMargin
+			s.pos[i] = lo - m
 		} else if lo+size > s.pos[i]+s.view[i] {
-			s.pos[i] = lo + size - s.view[i] + revealMargin
+			s.pos[i] = lo + size - s.view[i] + m
 		}
 		s.pos[i] = clampf(s.pos[i], 0, s.limit[i])
 		s.pull[i] = 0
@@ -247,7 +248,7 @@ func arrowAxis(k ui.Key) (i int, sign float32) {
 
 // ArrowScroll pulls the content toward a held arrow at its end and lets
 // go on release; a tap moves on release and a held key on every repeat.
-func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
+func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Node) bool {
 	i, sign := arrowAxis(e.Key)
 	if !s.on(i) {
 		return false
@@ -263,7 +264,7 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
 		s.apply()
 	}
 	if !e.Fires() {
-		if e.Phase == ui.Press && next == nil && s.room(i, sign) <= 0.5 {
+		if e.Phase == ui.Press && next == nil && s.room(i, sign) <= 0.5 && !s.outerRoom(i, sign) {
 			s.pull[i] = -sign * scrollStep
 			s.apply()
 			return true
@@ -290,7 +291,7 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
 		s.apply()
 		return true
 	}
-	if next != nil {
+	if next != nil || s.outerRoom(i, sign) {
 		return false
 	}
 	s.pull[i] -= sign * scrollStep
@@ -300,10 +301,26 @@ func (s *Scroll) ArrowScroll(e *ui.KeyEvent, next ui.Drawable) bool {
 
 // alongside reports whether d lies across from the view, so moving along
 // axis i can reach it without changing rows.
-func (s *Scroll) alongside(d ui.Drawable, i int) bool {
+func (s *Scroll) alongside(d ui.Node, i int) bool {
 	lo, size := span(ui.RestRect(s), 1-i)
 	dlo, dsize := span(ui.RestRect(d), 1-i)
 	return dlo < lo+size && lo < dlo+dsize
+}
+
+func (s *Scroll) scrollView() *Scroll { return s }
+
+// outerRoom reports whether a scroll around s can still move along axis i
+// toward sign. s then leaves the key at its own end to that one, so nested
+// scrolls hand over instead of rubber-banding.
+func (s *Scroll) outerRoom(i int, sign float32) bool {
+	for n := s.Parent(); n != nil; n = ui.BoxOf(n).Parent() {
+		if o, ok := n.(interface{ scrollView() *Scroll }); ok {
+			if v := o.scrollView(); v.on(i) && v.room(i, sign) > 0.5 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // room is how far the content can still scroll along axis i toward sign.
@@ -364,15 +381,20 @@ func (s *Scroll) DrawOver(c gfx.Canvas) {
 		return
 	}
 	r := s.Rect()
-	pad := s.Padding()
+	in := s.ContentRect()
 	col := ui.CurrentTheme.Foreground
+	// The thumbs run along the far edges, inside a border if there is one.
+	edge := float32(1)
+	if s.Bordered() {
+		edge = 2
+	}
 	if s.on(1) && s.limit[1] > 0 {
 		lo, size := thumb(s.thumb[1].Get(), s.limit[1], s.view[1])
-		c.VLine(ui.Round(r.W-1), ui.Round(pad.Top+lo), ui.Round(size), col)
+		c.VLine(ui.Round(r.W-edge), ui.Round(in.Y+lo), ui.Round(size), col)
 	}
 	if s.on(0) && s.limit[0] > 0 {
 		lo, size := thumb(s.thumb[0].Get(), s.limit[0], s.view[0])
-		c.HLine(ui.Round(pad.Left+lo), ui.Round(r.H-1), ui.Round(size), col)
+		c.HLine(ui.Round(in.X+lo), ui.Round(r.H-edge), ui.Round(size), col)
 	}
 }
 

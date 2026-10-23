@@ -1,0 +1,148 @@
+site_name: lilt
+site_url: https://chhongzh.github.io/lilt/
+site_description: 给 TinyGo 用的 GUI 框架，所有会动的东西都由弹簧驱动
+repo_url: https://github.com/chhongzh/lilt
+repo_name: chhongzh/lilt
+edit_uri: edit/main/docs/
+copyright: MIT License
+
+theme:
+  name: material
+  language: zh
+  # System fonts: Google Fonts is slow or blocked for many readers.
+  font: false
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: 跟随系统
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: 跟随系统
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      # Keeps Chinese headings readable in anchors; give a heading an
+      # explicit { #id } when other pages link to it.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys:
+      # The framework's logical keys, so pages can write ++ok++ and ++back++.
+      key_map:
+        ok: OK
+        back: Back
+        menu: Menu
+  - pymdownx.snippets:
+      # Paths are relative to the repository root, so pages can include
+      # Go source, e.g. the demos in cmd/docgif.
+      base_path: ["."]
+      check_paths: true
+      dedent_subsections: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+exclude_docs: |
+  /requirements.txt
+
+nav:
+  - 首页: index.md
+  - 快速开始: getting-started.md
+  - 核心概念:
+      - concepts/index.md
+      - 节点树: concepts/tree.md
+      - 布局: concepts/layout.md
+      - 主题与单位: concepts/theme.md
+      - 线程模型: concepts/threading.md
+      - 输入与焦点: concepts/input.md
+      - 动画: concepts/animation.md
+      - 页面与弹窗: concepts/layers.md
+  - 组件:
+      - widgets/index.md
+      - Label: widgets/label.md
+      - List 与 ListItem: widgets/list.md
+      - Button: widgets/button.md
+      - CheckBox 与 Radio: widgets/toggle.md
+      - Select: widgets/select.md
+      - Choice 与 Toggles: widgets/chips.md
+      - Input 与软键盘: widgets/input.md
+      - Scroll: widgets/scroll.md
+      - Drawer、Dialog 与 Toast: widgets/popups.md
+  - 进阶:
+      - 自定义组件: guides/custom-widget.md
+      - 接入硬件: guides/hardware.md
+      - 驱动与模拟器: guides/drivers.md
+  - API 速查:
+      - reference/index.md
+      - lilt: reference/lilt.md
+      - ui: reference/ui.md
+      - widget: reference/widget.md
+      - anim: reference/anim.md
+      - gfx: reference/gfx.md
+  - 在线体验: play.md

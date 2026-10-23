@@ -37,9 +37,9 @@ func (p *KeyPoller) Poll(k Key, down bool, dt float32) {
 		s.down = s.raw
 		if s.down {
 			s.held, s.next, s.iv = 0, p.RepeatDelay, p.RepeatInterval
-			app.Input.Emit(k, Press)
+			input.Emit(k, Press)
 		} else {
-			app.Input.Emit(k, Release)
+			input.Emit(k, Release)
 		}
 		return
 	}
@@ -48,7 +48,7 @@ func (p *KeyPoller) Poll(k Key, down bool, dt float32) {
 	}
 	s.held += dt
 	if s.held >= s.next {
-		app.Input.Emit(k, Repeat)
+		input.Emit(k, Repeat)
 		s.next += s.iv
 		s.iv = max(s.iv*p.Accel, p.MinInterval)
 	}

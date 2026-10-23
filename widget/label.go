@@ -112,8 +112,7 @@ func (l *Label) Measure(max ui.Vec2) ui.Vec2 {
 
 // overflow is how far the text runs past the content box.
 func (l *Label) overflow() float32 {
-	p := l.Padding()
-	return float32(l.textW) + marqueeGap - (l.Rect().W - p.Horizontal())
+	return float32(l.textW) + marqueeGap - l.ContentRect().W
 }
 
 func (l *Label) scrolling() bool {
@@ -169,9 +168,7 @@ func (l *Label) Update(dt float32) {
 }
 
 func (l *Label) Draw(c gfx.Canvas) {
-	r := l.Rect()
-	p := l.Padding()
-	box := ui.Rect{X: p.Left, Y: p.Top, W: r.W - p.Horizontal(), H: r.H - p.Vertical()}.Pixels()
+	box := l.ContentRect().Pixels()
 	c = c.Clip(box)
 	f := l.Font()
 	col := ui.CurrentTheme.Foreground

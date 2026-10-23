@@ -9,21 +9,19 @@ package ui
 // that it is at its end; a Release that does not Fire is offered to every
 // scroller so each can let go, and must return false.
 type ArrowScroller interface {
-	ArrowScroll(e *KeyEvent, next Drawable) bool
+	ArrowScroll(e *KeyEvent, next Node) bool
 }
 
 // Revealer is told when a descendant gains focus so it can scroll it into view.
-type Revealer interface{ Reveal(d Drawable) }
+type Revealer interface{ Reveal(d Node) }
 
-// FocusManager tracks the single focused node.
-type FocusManager struct {
-	current Drawable
+// focusManager tracks the single focused node.
+type focusManager struct {
+	current Node
 }
 
-func (f *FocusManager) Current() Drawable { return f.current }
-
 // Set focuses d, or clears focus for nil. Hidden or unfocusable nodes are ignored.
-func (f *FocusManager) Set(d Drawable) {
+func (f *focusManager) Set(d Node) {
 	if d != nil && (!d.box().Focusable() || !shown(d)) {
 		return
 	}
@@ -44,7 +42,7 @@ func (f *FocusManager) Set(d Drawable) {
 	Invalidate()
 }
 
-func reveal(d Drawable) {
+func reveal(d Node) {
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		if r, ok := n.(Revealer); ok {
 			r.Reveal(d)
@@ -53,12 +51,12 @@ func reveal(d Drawable) {
 }
 
 // leaving moves focus out of b before b is removed or hidden.
-func (f *FocusManager) leaving(b *Box) {
+func (f *focusManager) leaving(b *Box) {
 	if f.current == nil || !IsAncestor(b, f.current) {
 		return
 	}
-	var next Drawable
-	if scope := app.Screens.scope(); scope != nil {
+	var next Node
+	if scope := layers.scope(); scope != nil {
 		fd := finder{dir: KeyNone, src: restRect(f.current), from: f.current.box(), exclude: b}
 		fd.walk(scope)
 		next = fd.best
@@ -67,7 +65,7 @@ func (f *FocusManager) leaving(b *Box) {
 	f.Set(next)
 }
 
-func shown(d Drawable) bool {
+func shown(d Node) bool {
 	for n := d; n != nil; n = n.box().parent {
 		if !n.box().visible() {
 			return false
@@ -79,7 +77,7 @@ func shown(d Drawable) bool {
 // FindFocus picks the node focus should move to from `from` in direction dir,
 // following Android's FocusFinder: candidates overlapping the source's beam
 // win, then the lowest 13·major² + minor² distance.
-func FindFocus(scope, from Drawable, dir Key) Drawable {
+func FindFocus(scope, from Node, dir Key) Node {
 	if from == nil {
 		return FirstFocusable(scope)
 	}
@@ -89,7 +87,7 @@ func FindFocus(scope, from Drawable, dir Key) Drawable {
 }
 
 // FirstFocusable returns the first focusable node in tree order.
-func FirstFocusable(d Drawable) Drawable {
+func FirstFocusable(d Node) Node {
 	b := d.box()
 	if !b.visible() {
 		return nil
@@ -107,7 +105,7 @@ func FirstFocusable(d Drawable) Drawable {
 
 // restOrigin sums layout positions and offset targets, so focus decisions
 // use where things are going rather than where an animation has them now.
-func restOrigin(d Drawable) (x, y float32) {
+func restOrigin(d Node) (x, y float32) {
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		b := n.box()
 		x += b.rect.X + b.offsetX.Target()
@@ -117,9 +115,9 @@ func restOrigin(d Drawable) (x, y float32) {
 }
 
 // RestRect is d's rect in screen pixels where its animations will settle.
-func RestRect(d Drawable) Rect { return restRect(d) }
+func RestRect(d Node) Rect { return restRect(d) }
 
-func restRect(d Drawable) Rect {
+func restRect(d Node) Rect {
 	x, y := restOrigin(d)
 	b := d.box()
 	return Rect{x + b.rect.X + b.offsetX.Target(), y + b.rect.Y + b.offsetY.Target(), b.rect.W, b.rect.H}
@@ -130,16 +128,16 @@ type finder struct {
 	src      Rect
 	from     *Box
 	exclude  *Box
-	best     Drawable
+	best     Node
 	bestRect Rect
 }
 
-func (f *finder) walk(scope Drawable) {
+func (f *finder) walk(scope Node) {
 	x, y := restOrigin(scope)
 	f.visit(scope, x, y)
 }
 
-func (f *finder) visit(d Drawable, ox, oy float32) {
+func (f *finder) visit(d Node, ox, oy float32) {
 	b := d.box()
 	if !b.visible() || b == f.exclude {
 		return
@@ -273,22 +271,22 @@ const leanDist = 2
 // navigate moves focus with the arrows. Like every key, pressing only gives
 // feedback, the cursor leaning toward the key; the move happens on release,
 // or on each repeat while the key is held.
-func (a *App) navigate(e *KeyEvent) {
+func navigate(e *KeyEvent) {
 	dx, dy := arrowDir(e.Key)
 	switch e.Phase {
 	case Press:
-		a.Cursor.Lean(dx*leanDist, dy*leanDist)
+		cursor.Lean(dx*leanDist, dy*leanDist)
 	case Release:
-		a.Cursor.Lean(0, 0)
+		cursor.Lean(0, 0)
 	}
-	scope := a.Screens.scope()
-	cur := a.Focus.current
+	scope := layers.scope()
+	cur := focus.current
 	if scope == nil {
 		return
 	}
 	if cur == nil {
 		if e.Fires() {
-			a.Focus.Set(FirstFocusable(scope))
+			focus.Set(FirstFocusable(scope))
 		}
 		return
 	}
@@ -298,13 +296,13 @@ func (a *App) navigate(e *KeyEvent) {
 			if e.Phase == Press {
 				// The scroll view pulled its rows; the cursor rides along
 				// with the focused one instead of leaning away from it.
-				a.Cursor.Lean(0, 0)
+				cursor.Lean(0, 0)
 			}
 			return
 		}
 	}
 	if next != nil && e.Fires() {
-		a.Focus.Set(next)
+		focus.Set(next)
 	}
 }
 

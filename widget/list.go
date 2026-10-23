@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"github.com/chhongzh/lilt/anim"
 	"github.com/chhongzh/lilt/gfx"
 	"github.com/chhongzh/lilt/ui"
 )
@@ -25,13 +26,18 @@ func NewList(opts ...ui.Option) *List {
 // Column is the flex holding the rows, for adjusting gap or alignment.
 func (l *List) Column() *ui.Flex { return l.column }
 
-// ListItem is a focusable row with a title and an optional trailing widget.
+// ListItem is a focusable row with a title and an optional trailing
+// widget. Releasing OK over it runs its OnClick handler; while a slow one
+// runs, loading dots take the trailing widget's place. Rows with a value,
+// such as CheckBox and Select, build on it.
 type ListItem struct {
 	ui.Flex
+	Control
 	title    *Label
-	trailing ui.Drawable
-	onClick  func()
-	// activate is the embedding widget's own behaviour, run before onClick.
+	trailing ui.Node
+	waiting  bool
+	// activate replaces the click handler for rows with their own
+	// behaviour; it runs on the UI goroutine.
 	activate func()
 }
 
@@ -47,23 +53,24 @@ func (li *ListItem) init(title string) {
 	li.title.SetGrow(1)
 	ui.Attach(li, li.title)
 	li.SetFocusable(true)
-	li.SetPadding(ui.XY(4, 1))
+	li.SetClip(true)
+	li.SetPadding(ui.CurrentTheme.RowPadding)
 	li.SetGap(4)
 	li.SetCrossAlign(ui.CrossCenter)
+	li.OffsetX().SetSpring(anim.Bouncy)
 }
 
 func (li *ListItem) Title() *Label { return li.title }
 
 func (li *ListItem) SetFont(f *gfx.Font) { li.title.SetFont(f) }
 
-func (li *ListItem) SetOnClick(fn func()) { li.onClick = fn }
-
-func (li *ListItem) SetTrailing(d ui.Drawable) {
+func (li *ListItem) SetTrailing(d ui.Node) {
 	if li.trailing != nil {
 		ui.Remove(li.trailing)
 	}
 	li.trailing = d
 	if d != nil {
+		ui.BoxOf(d).OffsetY().SetSpring(anim.Snappy)
 		ui.Attach(li, d)
 	}
 }
@@ -74,13 +81,46 @@ func (li *ListItem) HandleKey(e *ui.KeyEvent) bool {
 	if e.Key != ui.KeyOK {
 		return false
 	}
-	if e.Phase == ui.Release && !e.Canceled {
+	if e.Phase == ui.Release && !e.Canceled && !li.Busy() {
 		if li.activate != nil {
 			li.activate()
-		}
-		if li.onClick != nil {
-			li.onClick()
+		} else {
+			li.run(clickCall(li.click), func(err error) {
+				if err != nil {
+					shake(li)
+				}
+			})
 		}
 	}
 	return true
+}
+
+// Update slides the trailing widget up and out while loading and back in
+// from below once the handler returns.
+func (li *ListItem) Update(dt float32) {
+	li.tick(dt)
+	if li.Loading() == li.waiting {
+		return
+	}
+	li.waiting = !li.waiting
+	if li.trailing == nil {
+		return
+	}
+	o := ui.BoxOf(li.trailing).OffsetY()
+	h := li.Rect().H
+	if li.waiting {
+		o.Set(-h)
+	} else {
+		o.Jump(h)
+		o.Set(0)
+	}
+}
+
+func (li *ListItem) DrawOver(c gfx.Canvas) {
+	if !li.waiting {
+		return
+	}
+	r := li.ContentRect()
+	x := ui.Round(r.Right() - 9*ui.Unit())
+	drawWaiting(c, x, ui.Round(r.Center().Y), li.elapsed)
 }

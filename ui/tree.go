@@ -1,7 +1,7 @@
 package ui
 
 // Add appends children to parent, or to the node parent's Content returns.
-func Add(parent Drawable, children ...Drawable) {
+func Add(parent Node, children ...Node) {
 	parent = contentOf(parent)
 	for _, c := range children {
 		Attach(parent, c)
@@ -9,7 +9,7 @@ func Add(parent Drawable, children ...Drawable) {
 }
 
 // Insert places child at index i among parent's children.
-func Insert(parent Drawable, i int, child Drawable) {
+func Insert(parent Node, i int, child Node) {
 	parent = contentOf(parent)
 	Attach(parent, child)
 	pb := parent.box()
@@ -19,7 +19,7 @@ func Insert(parent Drawable, i int, child Drawable) {
 
 // Attach appends child to parent directly, ignoring ContentHost. Widgets use
 // it to build their internal structure.
-func Attach(parent, child Drawable) {
+func Attach(parent, child Node) {
 	if _, ok := parent.(Leaf); ok {
 		panic("ui: node does not accept children")
 	}
@@ -35,16 +35,14 @@ func Attach(parent, child Drawable) {
 
 // Remove detaches d from its parent and tells the parent. A node may remove
 // itself. Focus inside d moves to the nearest remaining node.
-func Remove(d Drawable) {
+func Remove(d Node) {
 	b := d.box()
 	p := b.parent
 	if p == nil {
 		return
 	}
-	if app != nil {
-		app.Focus.leaving(b)
-		app.Input.forget(d)
-	}
+	focus.leaving(b)
+	input.forget(d)
 	pb := p.box()
 	for i, c := range pb.children {
 		if c.box() == b {
@@ -63,14 +61,14 @@ func Remove(d Drawable) {
 }
 
 // RemoveChildren detaches every child of parent, or of its Content.
-func RemoveChildren(parent Drawable) {
+func RemoveChildren(parent Node) {
 	pb := contentOf(parent).box()
 	for len(pb.children) > 0 {
 		Remove(pb.children[len(pb.children)-1])
 	}
 }
 
-func contentOf(d Drawable) Drawable {
+func contentOf(d Node) Node {
 	if h, ok := d.(ContentHost); ok {
 		if c := h.Content(); c != nil {
 			return c
@@ -80,7 +78,7 @@ func contentOf(d Drawable) Drawable {
 }
 
 // IsAncestor reports whether a is d or contains d.
-func IsAncestor(a, d Drawable) bool {
+func IsAncestor(a, d Node) bool {
 	ab := a.box()
 	for n := d; n != nil; n = n.box().parent {
 		if n.box() == ab {
@@ -91,9 +89,6 @@ func IsAncestor(a, d Drawable) bool {
 }
 
 // Attached reports whether d is in the live tree.
-func Attached(d Drawable) bool {
-	if app == nil {
-		return false
-	}
-	return IsAncestor(app.root, d)
+func Attached(d Node) bool {
+	return IsAncestor(root, d)
 }

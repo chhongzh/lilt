@@ -5,22 +5,21 @@ import (
 	"github.com/chhongzh/lilt/ui"
 )
 
-// sheetMax is the share of the screen height a Select sheet may take.
-const sheetMax = 0.8
-
 // Select is a list row showing the chosen option; activating it opens a
-// sheet of radios.
+// bottom Drawer of radios. Picking one closes the drawer and runs OnChange,
+// if the option changed, then OnClick, while the row shows its loading; a
+// handler that fails puts the old option back.
 type Select struct {
 	ListItem
 	value    *Label
 	options  []string
 	selected int
-	onChange func(int)
 }
 
 func NewSelect(title string, options []string, selected int, opts ...ui.Option) *Select {
 	s := &Select{options: options, selected: selected}
 	s.init(title)
+	s.kind = 0
 	s.value = NewLabel(s.optionText(), Font(ui.CurrentTheme.SmallFont))
 	s.SetTrailing(s.value)
 	s.activate = s.open
@@ -30,12 +29,11 @@ func NewSelect(title string, options []string, selected int, opts ...ui.Option) 
 
 func (s *Select) Selected() int { return s.selected }
 
+// SetSelected shows option i without calling OnChange.
 func (s *Select) SetSelected(i int) {
 	s.selected = i
 	s.value.SetText(s.optionText())
 }
-
-func (s *Select) SetOnChange(fn func(int)) { s.onChange = fn }
 
 func (s *Select) optionText() string {
 	if s.selected < 0 || s.selected >= len(s.options) {
@@ -45,26 +43,29 @@ func (s *Select) optionText() string {
 }
 
 func (s *Select) open() {
-	t := ui.CurrentTheme
-	_, sh := ui.Current().Size()
-	header := NewLabel(s.title.Text(), Font(t.SmallFont), ui.Padding(ui.XY(4, 1)))
+	d := NewDrawer(Bottom, s.title.Text())
 	list := NewList()
-	group := NewRadioGroup(s.selected, func(i int) {
-		s.SetSelected(i)
-		if s.onChange != nil {
-			s.onChange(i)
-		}
-		ui.Pop()
-	})
+	group := NewRadioGroup(s.selected)
+	group.picked = func(from, to int) {
+		d.Close()
+		s.SetSelected(to)
+		s.run(chain(changeCall(s.change, from, to), clickCall(s.click)), func(err error) {
+			if err != nil {
+				s.SetSelected(from)
+				shake(s)
+			}
+		})
+	}
 	for _, o := range s.options {
 		ui.Add(list, NewRadio(group, o))
 	}
-	row := float32(gfx.LineHeight(t.Font)) + 2
-	head := float32(gfx.LineHeight(t.SmallFont)) + 2
-	h := min(row*float32(len(s.options)), float32(sh)*sheetMax-head)
-	list.SetHeight(ui.Px(h))
-	sheet := ui.NewColumn(ui.Padding(ui.LTRB(0, 2, 0, 1)), ui.Children(header, list))
-	ui.Push(sheet, ui.Sheet)
+	// The list is sized to its rows so a short one does not fill the drawer.
+	_, sh := ui.ScreenSize()
+	row := float32(gfx.LineHeight(ui.CurrentTheme.Font)) + ui.CurrentTheme.RowPadding.Vertical()*ui.Unit()
+	room := float32(sh)*0.8 - d.TitleHeight() - ui.CurrentTheme.PanelPadding.Top*ui.Unit()
+	list.SetHeight(ui.Px(min(row*float32(len(s.options)), room)))
+	ui.Add(d, list)
+	d.Open()
 	if s.selected >= 0 && s.selected < len(group.Radios()) {
 		ui.SetFocus(group.Radios()[s.selected])
 	}

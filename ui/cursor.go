@@ -71,12 +71,22 @@ func (c *Cursor) Leap() { c.lift.Bump(leapHeight) }
 // Nudge throws the cursor about px sideways and lets it spring back.
 func (c *Cursor) Nudge(px float32) { c.shiftX.Bump(px) }
 
+// clear forgets the cursor entirely, so after a reset the next focus grows
+// it afresh instead of matching, or keeping on screen, a rect from before.
+func (c *Cursor) clear() {
+	for _, v := range [...]*anim.Value{&c.l, &c.t, &c.r, &c.b, &c.press, &c.lift, &c.shiftX, &c.shiftY} {
+		v.Jump(0)
+	}
+	c.target, c.has, c.hasPointer = Rect{}, false, false
+	c.leanX, c.leanY = 0, 0
+}
+
 func (c *Cursor) pointerAt(x, y int16) {
 	c.hasPointer, c.px, c.py = true, x, y
 }
 
 func (c *Cursor) update() {
-	f := app.Focus.current
+	f := focus.current
 	if f == nil || !shown(f) {
 		if c.has {
 			c.has = false
@@ -151,7 +161,7 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 		return
 	}
 	p := r.Pixels()
-	rad := min(CurrentTheme.Radius, p.H/2, p.W/2)
+	rad := min(radiusPx(CurrentTheme.Radius), p.H/2, p.W/2)
 	if cv.CanInvert() {
 		cv.InvertRoundRect(p, rad)
 	} else {
@@ -162,11 +172,11 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 // screenRect returns d's rect in screen pixels exactly as paint will place
 // it, clipped by its clipping ancestors. When nothing is visible the unclipped
 // rect is returned so the cursor does not fly to the corner.
-func screenRect(d Drawable) (Rect, bool) {
+func screenRect(d Node) (Rect, bool) {
 	x, y := pixelOrigin(d)
 	p := pixelRect(d.box())
 	own := gfx.Rect{X: x, Y: y, W: p.W, H: p.H}
-	vis := own.Intersect(gfx.Rect{W: app.w, H: app.h})
+	vis := own.Intersect(gfx.Rect{W: scrW, H: scrH})
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		b := n.box()
 		if b.flags&flagClip == 0 {
@@ -188,7 +198,7 @@ func pixelRect(b *Box) gfx.Rect {
 }
 
 // pixelOrigin is d's top-left corner on screen as paint computes it.
-func pixelOrigin(d Drawable) (x, y int16) {
+func pixelOrigin(d Node) (x, y int16) {
 	for n := d; n != nil; n = n.box().parent {
 		p := pixelRect(n.box())
 		x += p.X

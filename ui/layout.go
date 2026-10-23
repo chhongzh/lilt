@@ -28,11 +28,12 @@ func resolve(s Size, avail float32) (v float32, auto bool) {
 }
 
 // Measure returns the size d wants inside max, the space left after its margin.
-func Measure(d Drawable, max Vec2) Vec2 {
+func Measure(d Node, max Vec2) Vec2 {
 	b := d.box()
 	w, autoW := resolve(b.width, max.X)
 	h, autoH := resolve(b.height, max.Y)
 	if autoW || autoH {
+		p := padPx(b)
 		inner := Vec2{max.X, max.Y}
 		if !autoW {
 			inner.X = w
@@ -40,20 +41,20 @@ func Measure(d Drawable, max Vec2) Vec2 {
 		if !autoH {
 			inner.Y = h
 		}
-		inner.X -= b.padding.Horizontal()
-		inner.Y -= b.padding.Vertical()
+		inner.X -= p.Horizontal()
+		inner.Y -= p.Vertical()
 		c := contentSize(d, inner)
 		if autoW {
-			w = c.X + b.padding.Horizontal()
+			w = c.X + p.Horizontal()
 		}
 		if autoH {
-			h = c.Y + b.padding.Vertical()
+			h = c.Y + p.Vertical()
 		}
 	}
 	return Vec2{w, h}
 }
 
-func contentSize(d Drawable, max Vec2) Vec2 {
+func contentSize(d Node, max Vec2) Vec2 {
 	if m, ok := d.(Measurer); ok {
 		return m.Measure(max)
 	}
@@ -66,15 +67,16 @@ func contentSize(d Drawable, max Vec2) Vec2 {
 		if !cb.visible() {
 			continue
 		}
-		cs := Measure(c, shrink(max, cb.margin))
-		s.X = max32(s.X, cs.X+cb.margin.Horizontal()+cb.pos.X)
-		s.Y = max32(s.Y, cs.Y+cb.margin.Vertical()+cb.pos.Y)
+		m := marginPx(cb)
+		cs := Measure(c, shrink(max, m))
+		s.X = max32(s.X, cs.X+m.Horizontal()+cb.pos.X)
+		s.Y = max32(s.Y, cs.Y+m.Vertical()+cb.pos.Y)
 	}
 	return s
 }
 
 // Arrange gives d its final rect, relative to its parent, and lays out its children.
-func Arrange(d Drawable, r Rect) {
+func Arrange(d Node, r Rect) {
 	b := d.box()
 	if b.flags&(flagAnimateLayout|flagLaidOut) == flagAnimateLayout|flagLaidOut {
 		b.offsetX.Shift(b.rect.X - r.X)
@@ -82,7 +84,7 @@ func Arrange(d Drawable, r Rect) {
 	}
 	b.rect = r
 	b.flags |= flagLaidOut
-	content := Rect{b.padding.Left, b.padding.Top, r.W - b.padding.Horizontal(), r.H - b.padding.Vertical()}
+	content := b.ContentRect()
 	if l, ok := d.(Layouter); ok {
 		l.ArrangeChildren(content)
 		return
@@ -94,17 +96,24 @@ func Arrange(d Drawable, r Rect) {
 
 // ArrangeFree places c inside area by its anchor, origin and position. It is
 // the default for nodes that are not Layouters.
-func ArrangeFree(c Drawable, area Rect) {
+func ArrangeFree(c Node, area Rect) {
 	cb := c.box()
 	if !cb.visible() {
 		return
 	}
-	avail := shrink(Vec2{area.W, area.H}, cb.margin)
+	m := marginPx(cb)
+	avail := shrink(Vec2{area.W, area.H}, m)
 	s := Measure(c, avail)
-	x := area.X + cb.margin.Left + cb.anchor.X*avail.X - cb.origin.X*s.X + cb.pos.X
-	y := area.Y + cb.margin.Top + cb.anchor.Y*avail.Y - cb.origin.Y*s.Y + cb.pos.Y
+	x := area.X + m.Left + cb.anchor.X*avail.X - cb.origin.X*s.X + cb.pos.X
+	y := area.Y + m.Top + cb.anchor.Y*avail.Y - cb.origin.Y*s.Y + cb.pos.Y
 	Arrange(c, Rect{x, y, s.X, s.Y})
 }
+
+func padPx(b *Box) Insets    { return b.padding.Scale(Unit()) }
+func marginPx(b *Box) Insets { return b.margin.Scale(Unit()) }
+
+// radiusPx scales a corner radius given in units.
+func radiusPx(r int16) int16 { return Round(float32(r) * Unit()) }
 
 func shrink(v Vec2, m Insets) Vec2 {
 	return Vec2{max32(v.X-m.Horizontal(), 0), max32(v.Y-m.Vertical(), 0)}

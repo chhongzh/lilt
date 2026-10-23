@@ -1,0 +1,29 @@
+/* Colours of the silent driver's palette, so the site matches the demos. */
+:root {
+  --md-primary-fg-color: #0b0e14;
+  --md-primary-fg-color--light: #1a2030;
+  --md-primary-fg-color--dark: #08090e;
+  --md-primary-bg-color: #c8e6ff;
+  --md-accent-fg-color: #4aa8e8;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0d1017;
+  --md-accent-fg-color: #8fd0ff;
+  --md-typeset-a-color: #8fd0ff;
+}
+
+/* Demo GIFs are pixel art: scale them without blurring. */
+.demo {
+  image-rendering: pixelated;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px #ffffff1a;
+}
+
+.lilt-sim {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 0;
+  border-radius: 6px;
+  background: #080a0e;
+}

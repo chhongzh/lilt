@@ -58,6 +58,7 @@ func (f *Flex) SetAxis(a Axis) {
 
 func (f *Flex) Gap() float32 { return f.gap }
 
+// SetGap sets the space between children, in units.
 func (f *Flex) SetGap(g float32) {
 	if f.gap != g {
 		f.gap = g
@@ -95,7 +96,7 @@ func (f *Flex) join(main, cross float32) Vec2 {
 }
 
 func (f *Flex) margins(b *Box) (main, cross, lead, crossLead float32) {
-	m := b.margin
+	m := marginPx(b)
 	if f.axis == Horizontal {
 		return m.Horizontal(), m.Vertical(), m.Left, m.Top
 	}
@@ -117,7 +118,7 @@ func (f *Flex) MeasureChildren(max Vec2) Vec2 {
 		if !cb.visible() {
 			continue
 		}
-		s := Measure(c, shrink(max, cb.margin))
+		s := Measure(c, shrink(max, marginPx(cb)))
 		mm, cm, _, _ := f.margins(cb)
 		sm, sc := f.split(s)
 		main += sm + mm
@@ -125,7 +126,7 @@ func (f *Flex) MeasureChildren(max Vec2) Vec2 {
 		n++
 	}
 	if n > 1 {
-		main += f.gap * float32(n-1)
+		main += f.gap * Unit() * float32(n-1)
 	}
 	return f.join(main, cross)
 }
@@ -139,18 +140,19 @@ func (f *Flex) ArrangeChildren(content Rect) {
 		if !cb.visible() {
 			continue
 		}
-		cb.measured = Measure(c, shrink(Vec2{content.W, content.H}, cb.margin))
+		cb.measured = Measure(c, shrink(Vec2{content.W, content.H}, marginPx(cb)))
 		mm, _, _, _ := f.margins(cb)
 		sm, _ := f.split(cb.measured)
 		used += sm + mm
 		grow += cb.grow
 		n++
 	}
+	gap := f.gap * Unit()
 	if n > 1 {
-		used += f.gap * float32(n-1)
+		used += gap * float32(n-1)
 	}
 	free := availMain - used
-	pos, gap := float32(0), f.gap
+	var pos float32
 	if grow == 0 && free > 0 {
 		switch f.main {
 		case MainCenter:

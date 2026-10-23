@@ -6,8 +6,10 @@ package main
 import (
 	"machine"
 	"strconv"
+	"sync/atomic"
 	"time"
 
+	"github.com/chhongzh/lilt"
 	"github.com/chhongzh/lilt/driver/sh1106"
 	"github.com/chhongzh/lilt/examples/gallery"
 	"github.com/chhongzh/lilt/gfx"
@@ -94,23 +96,23 @@ func main() {
 		panic(err)
 	}
 
-	var held [padCount]bool
+	var held [padCount]atomic.Bool
 	var gpio [padCount]string
 	for i, k := range keys {
 		k.pin.Configure(machine.PinConfig{Mode: machine.PinInputPulldown})
 		gpio[i] = strconv.Itoa(int(k.pin))
 	}
 
-	app := ui.NewApp(oled{dev})
-	gallery.Build(
-		gallery.Demo{Title: "Keys", Build: func() ui.Drawable {
+	lilt.FPS = maxFPS
+	lilt.Start(oled{dev}, gallery.Home(
+		gallery.Demo{Title: "Keys", Build: func() ui.Node {
 			return gallery.Page("Keys", newKeypad(&held, &gpio))
 		}},
 		gallery.Demo{Title: "Pins", Build: pins},
-	)
-	poller := ui.NewKeyPoller()
+	))
 
-	// Keys are sampled once per frame, so this loop replaces app.Run.
+	// The UI runs on its own goroutine; this one samples the keys.
+	poller := ui.NewKeyPoller()
 	period := time.Second / maxFPS
 	last := time.Now()
 	for {
@@ -118,20 +120,16 @@ func main() {
 		dt := min(float32(now.Sub(last).Seconds()), 0.1)
 		last = now
 		for i, k := range keys {
-			held[i] = k.pin.Get()
-			poller.Poll(k.key, held[i], dt)
+			down := k.pin.Get()
+			held[i].Store(down)
+			poller.Poll(k.key, down, dt)
 		}
-		if _, err := app.Frame(dt); err != nil {
-			panic(err)
-		}
-		if spent := time.Since(now); spent < period {
-			time.Sleep(period - spent)
-		}
+		time.Sleep(period)
 	}
 }
 
 // pins lists every connection with its GPIO, for checking the wiring.
-func pins() ui.Drawable {
+func pins() ui.Node {
 	small := widget.Font(ui.CurrentTheme.SmallFont)
 	l := widget.NewList()
 	for _, w := range wiring {
