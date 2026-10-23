@@ -37,3 +37,7 @@ go.work.sum
 /docs/assets/demos/
 /.docshots/
 /docs/assets/highlight.gif
+
+# Scratch preview output and firmware dumps
+/pv/
+*.bin
