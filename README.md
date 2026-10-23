@@ -8,7 +8,7 @@
 
 上图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
 
-设计需求见 [DESIGN.md](DESIGN.md)。
+文档：<https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
 
 ## 包
 

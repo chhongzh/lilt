@@ -31,3 +31,9 @@ go.work.sum
 # Editor/IDE
 .idea/
 # .vscode/
+
+# Documentation build output
+/site/
+/docs/assets/demos/
+/.docshots/
+/docs/assets/highlight.gif
