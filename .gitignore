@@ -41,3 +41,6 @@ go.work.sum
 # Scratch preview output and firmware dumps
 /pv/
 *.bin
+
+# GoReleaser output
+/dist/

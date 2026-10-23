@@ -18,31 +18,23 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # GoReleaser needs the earlier tags to find the previous version.
+          fetch-depth: 0
 
-      # The release notes are the CHANGELOG section for this tag, so a tag
-      # without one fails here instead of publishing an empty release.
-      - name: release notes
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v head="## [$version]" '
-            index($0, head) == 1 { found = 1; next }
-            found && index($0, "## [") == 1 { exit }
-            found { print }
-          ' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "CHANGELOG.md has no section for $version"
-            exit 1
-          fi
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
-      - name: publish
+      # Writes the notes from the commits since the previous tag, grouped as
+      # .goreleaser.yaml says, and publishes the GitHub release.
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          flags=""
-          case "$GITHUB_REF_NAME" in
-            *-*) flags="--prerelease" ;;
-          esac
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag $flags
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Asking the module proxy for the new version makes pkg.go.dev list it
       # without waiting for someone to `go get` it first.
