@@ -71,6 +71,16 @@ func (c *Cursor) Leap() { c.lift.Bump(leapHeight) }
 // Nudge throws the cursor about px sideways and lets it spring back.
 func (c *Cursor) Nudge(px float32) { c.shiftX.Bump(px) }
 
+// clear forgets the cursor entirely, so after a reset the next focus grows
+// it afresh instead of matching, or keeping on screen, a rect from before.
+func (c *Cursor) clear() {
+	for _, v := range [...]*anim.Value{&c.l, &c.t, &c.r, &c.b, &c.press, &c.lift, &c.shiftX, &c.shiftY} {
+		v.Jump(0)
+	}
+	c.target, c.has, c.hasPointer = Rect{}, false, false
+	c.leanX, c.leanY = 0, 0
+}
+
 func (c *Cursor) pointerAt(x, y int16) {
 	c.hasPointer, c.px, c.py = true, x, y
 }

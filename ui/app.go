@@ -65,7 +65,7 @@ func reset() {
 	}
 	focus.Set(nil)
 	input.reset()
-	cursor.has = false
+	cursor.clear()
 }
 
 // Do runs fn between frames, so code on other goroutines can change the
