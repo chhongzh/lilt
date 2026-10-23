@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lilt</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #080a0e; }
+  canvas { image-rendering: pixelated; }
+  p { position: fixed; left: 0; right: 0; bottom: 8px; margin: 0; text-align: center; pointer-events: none;
+      color: #c8e6ff; opacity: .6; font: 13px system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<p>WASD move · Space OK · J Back (SET) · K Menu (RST)</p>
+<script src="wasm_exec.js"></script>
+<script>
+  const go = new Go();
+  WebAssembly.instantiateStreaming(fetch("lilt.wasm"), go.importObject)
+    .then((r) => go.run(r.instance));
+</script>
+</body>
+</html>

@@ -19,9 +19,10 @@ gfx       Screen 接口、带裁剪和平移的 Canvas、字体
 ui        节点树、布局（Flex / Grid / Stack）、页面与弹窗的层栈、焦点、输入、光标、主题
 widget    Label、List、Scroll、Button、CheckBox、Radio、Select、Chip、Choice、Toggles、Input、
           Drawer、Dialog、Toast、软键盘
-driver    SH1106 驱动（待重写）
+driver    SH1106 驱动（待重写）；desktop 桌面窗口（也能编成 wasm）；silent 只画进内存、输出图片和 GIF
 examples  gallery 演示，以及跑 gallery 的 ESP32-S3 固件（esp32s3-generic）
 cmd       preview：在主机上按脚本回放一段操作，输出 GIF 和截图拼图
+          sim：在桌面窗口或浏览器里跑 gallery
 ```
 
 除了 `driver`，这些包都不 import `machine`，主机上可以直接编译和预览。
@@ -127,7 +128,7 @@ lilt.Start(gfx.FromDisplayer(dev), home)
 
 ```sh
 gofmt -l anim gfx ui widget examples cmd
-go vet . ./anim ./gfx ./ui ./widget ./examples/gallery ./cmd/preview
+go vet . ./anim ./gfx ./ui ./widget ./driver/desktop ./driver/silent ./examples/gallery ./cmd/preview ./cmd/sim
 go run ./cmd/preview -o /tmp/preview
 tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
@@ -135,6 +136,51 @@ tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-gene
 `go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。preview 不经过 `lilt.Start`，而是通过 `internal/core` 自己逐帧推进，这样录出来的每一帧都在固定的时间点上。
 
 preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。加 `-highlight` 改录半分钟的精华片段 `highlight.gif`，也就是本文开头那张。
+
+## 桌面模拟器
+
+没有板子也能玩。`driver/desktop` 用 [Ebitengine](https://ebitengine.org) 开一个窗口当屏幕，键盘当按键，不需要 cgo：
+
+```sh
+go run ./cmd/sim
+```
+
+| 键 | 对应 |
+| --- | --- |
+| W A S D 或方向键 | 上 左 下 右 |
+| 空格、回车 | OK（摇杆按下） |
+| J | SET，即 Back |
+| K | RST，即 Menu |
+
+自己的程序一行接入，`Run` 会占住主 goroutine，直到窗口关闭：
+
+```go
+desktop.Run(desktop.Config{Title: "lilt", Scale: 6}, home)
+```
+
+同一份代码也能编成 wasm，在浏览器里跑：
+
+```sh
+mkdir out
+GOOS=js GOARCH=wasm go build -o out/lilt.wasm ./cmd/sim
+cp cmd/sim/index.html "$(go env GOROOT)/lib/wasm/wasm_exec.js" out/
+```
+
+然后用任意静态服务器托管 `out`，例如 `python -m http.server -d out`。
+
+## 无头渲染
+
+`driver/silent` 是个不显示任何东西的屏幕：一块单色帧缓冲，加上 `Image`、`Region` 和 `Recorder`，可以导出图片或 GIF。`cmd/preview` 就是靠它录的 README 动图，写测试或自己出图时也能直接用：
+
+```go
+scr := silent.New(128, 64)
+lilt.Start(scr, home)
+time.Sleep(time.Second)
+lilt.Stop()
+png.Encode(f, scr.Image(4)) // 截一张图
+```
+
+`Screen` 不是并发安全的，UI 还在跑的时候不能读，要等 `lilt.Stop` 之后。录 GIF 则像 `cmd/preview` 那样不走 `lilt.Start`，自己通过 `internal/core` 逐帧推进，每走一帧就 `Recorder.Capture(scr, delay)` 一次（`delay` 单位 1/100 秒，每帧只存变化的部分），最后 `Encode`。
 
 ## 示例固件
 
