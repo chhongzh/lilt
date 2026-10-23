@@ -1,14 +1,30 @@
-# lilt
+<p align='center'>
+  <img src='assets/highlight.gif' width='560' alt='lilt 演示'>
+</p>
 
-给 TinyGo 用的 GUI 框架，手感参照 osu!framework 和 iOS：所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。模块路径是 `github.com/chhongzh/lilt`。
+<p align='center'><strong>给 TinyGo 用的 GUI 框架，所有会动的东西都由弹簧驱动，按下有反馈，松手才触发。</strong></p>
 
-![实物演示：ESP32-S3 + SH1106](assets/demo.jpg)
+<p align='center'>
+  <a href='https://pkg.go.dev/github.com/chhongzh/lilt' target='_blank'><img src='https://pkg.go.dev/badge/github.com/chhongzh/lilt' alt='Go Reference'></a>
+  <a href='https://github.com/chhongzh/lilt/actions/workflows/docs.yml' target='_blank'><img src='https://github.com/chhongzh/lilt/actions/workflows/docs.yml/badge.svg' alt='Docs Build'></a>
+  <a href='LICENSE' target='_blank'><img src='https://img.shields.io/github/license/chhongzh/lilt' alt='License'></a>
+</p>
 
-![gallery 演示](assets/highlight.gif)
+<p align='center' style='margin-bottom:1rem'>
+  <a href='https://chhongzh.github.io/lilt/' target='_blank'><img src='https://img.shields.io/badge/文档-chhongzh.github.io%2Flilt-blue' alt='文档'></a>
+</p>
 
-上图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
+## 简介
 
-文档：<https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
+框架与硬件无关，屏幕和按键都是接口，单色、彩色屏都能接。手感参照 osu!framework 和 iOS，模块路径是 `github.com/chhongzh/lilt`。上面这张动图由 `go run ./cmd/preview -highlight` 在主机上录制，跑的是和固件同一份 gallery 代码。
+
+## 文档
+
+Go to <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
+
+## 最低 Go 版本
+
+Use `go 1.27` and above。
 
 ## 包
 
@@ -185,3 +201,11 @@ png.Encode(f, scr.Image(4)) // 截一张图
 ## 示例固件
 
 [examples/esp32s3-generic](examples/esp32s3-generic) 是一台 ESP32-S3 + SH1106 + 五向摇杆的掌机，额外带一个实时显示引脚电平的按键页。材料、接线和烧录步骤见它的 [README](examples/esp32s3-generic/README.md)。
+
+## 贡献
+
+欢迎提交 Pull Request。
+
+## 许可证
+
+lilt 以 MIT [LICENSE](LICENSE) 发布。文档站点同样基于 MIT 发布。
