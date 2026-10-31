@@ -68,7 +68,7 @@ type Box struct {
 	grow                float32
 	flags               flags
 	bg, border          gfx.Color
-	radius              int16
+	radius              float32
 
 	rect     Rect // relative to the parent's top-left corner
 	measured Vec2 // scratch space for Layouters
@@ -92,7 +92,7 @@ func (b *Box) Rect() Rect { return b.rect }
 // ContentRect is the area inside the padding, in pixels and in the node's
 // own coordinates.
 func (b *Box) ContentRect() Rect {
-	p := padPx(b)
+	p := b.padding
 	return Rect{p.Left, p.Top, b.rect.W - p.Horizontal(), b.rect.H - p.Vertical()}
 }
 
@@ -225,8 +225,8 @@ func (b *Box) SetBorder(c gfx.Color) {
 	Invalidate()
 }
 
-// SetRadius rounds the background and border, in units.
-func (b *Box) SetRadius(r int16) {
+// SetRadius rounds the background and border, in logical pixels.
+func (b *Box) SetRadius(r float32) {
 	b.radius = r
 	Invalidate()
 }

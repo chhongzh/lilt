@@ -17,8 +17,6 @@ import (
 	"github.com/chhongzh/lilt/ui"
 )
 
-const width, height = 128, 64
-
 func timeline() *reel.Script {
 	s := &reel.Script{}
 	s.Wait(0.6)
@@ -322,7 +320,12 @@ func main() {
 	out := flag.String("o", "preview", "output directory")
 	scale := flag.Int("scale", 4, "GIF pixel scale")
 	highlight := flag.Bool("highlight", false, "record the short highlight reel as highlight.gif")
+	w := flag.Int("w", 128, "screen width in physical pixels")
+	h := flag.Int("h", 64, "screen height in physical pixels")
+	zoom := flag.Float64("zoom", 1, "multiplies the scale the screen size gives")
 	flag.Parse()
+	ui.SetZoom(float32(*zoom))
+	gallery.FitFonts(int16(*w), int16(*h))
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		fail(err)
 	}
@@ -331,7 +334,7 @@ func main() {
 	if *highlight {
 		sc, name = highlights(), "highlight.gif"
 	}
-	res, err := reel.Record(silent.New(width, height), gallery.Home(), sc, *scale)
+	res, err := reel.Record(silent.New(*w, *h), gallery.Home(), sc, *scale)
 	if err != nil {
 		fail(err)
 	}

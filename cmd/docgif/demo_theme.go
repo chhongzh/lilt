@@ -35,7 +35,7 @@ func init() {
 func settings() ui.Node {
 	t := ui.CurrentTheme
 	list := widget.NewList()
-	list.Column().SetPadding(ui.XY(2, 1)) // units, like every inset
+	list.Column().SetPadding(ui.XY(2, 1)) // logical pixels, like every inset
 	list.Column().SetGap(t.Gap)
 	ui.Add(list,
 		widget.NewCheckBox("Wi-Fi", true),
@@ -52,7 +52,7 @@ func themeDefault() ui.Node { return settings() }
 func themeLarge() ui.Node {
 	// --8<-- [start:theme-large]
 	// Change the theme before building: widgets read it when constructed.
-	ui.CurrentTheme.Font = &freesans.Regular9pt7b // 22 px lines, so 1 unit = 22/15 px
+	ui.CurrentTheme.Font = &freesans.Regular9pt7b // 22 px lines; spacing stays in logical px
 	root := settings()
 	// --8<-- [end:theme-large]
 	return root

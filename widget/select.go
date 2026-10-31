@@ -1,7 +1,6 @@
 package widget
 
 import (
-	"github.com/chhongzh/lilt/gfx"
 	"github.com/chhongzh/lilt/ui"
 )
 
@@ -61,8 +60,8 @@ func (s *Select) open() {
 	}
 	// The list is sized to its rows so a short one does not fill the drawer.
 	_, sh := ui.ScreenSize()
-	row := float32(gfx.LineHeight(ui.CurrentTheme.Font)) + ui.CurrentTheme.RowPadding.Vertical()*ui.Unit()
-	room := float32(sh)*0.8 - d.TitleHeight() - ui.CurrentTheme.PanelPadding.Top*ui.Unit()
+	row := ui.LineHeight(ui.CurrentTheme.Font) + ui.CurrentTheme.RowPadding.Vertical()
+	room := sh*0.8 - d.TitleHeight() - ui.CurrentTheme.PanelPadding.Top
 	list.SetHeight(ui.Px(min(row*float32(len(s.options)), room)))
 	ui.Add(d, list)
 	d.Open()

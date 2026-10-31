@@ -63,7 +63,7 @@ const (
 )
 
 type PointerEvent struct {
-	X, Y  int16
+	X, Y  float32 // logical pixels
 	Phase PointerPhase
 }
 
@@ -126,8 +126,8 @@ func (m *inputManager) EmitRune(r rune) {
 	m.push(event{key: KeyEvent{Key: KeyChar, Phase: Press, Rune: r}})
 }
 
-// EmitPointer queues a touch or mouse event in screen pixels.
-func (m *inputManager) EmitPointer(x, y int16, p PointerPhase) {
+// EmitPointer queues a touch or mouse event in logical pixels.
+func (m *inputManager) EmitPointer(x, y float32, p PointerPhase) {
 	m.push(event{ptr: PointerEvent{x, y, p}, pointer: true})
 }
 
@@ -273,7 +273,7 @@ func (m *inputManager) pointer(e PointerEvent) {
 			}
 			return
 		}
-		if absf(float32(e.X-m.ptrStart.X))+absf(float32(e.Y-m.ptrStart.Y)) < dragSlop {
+		if absf(e.X-m.ptrStart.X)+absf(e.Y-m.ptrStart.Y) < dragSlop {
 			return
 		}
 		if h := m.offer(&e); h != nil {

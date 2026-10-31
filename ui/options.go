@@ -62,7 +62,7 @@ func Background(c gfx.Color) Option {
 	return func(d Node) { d.box().SetBackground(c) }
 }
 func Border(c gfx.Color) Option { return func(d Node) { d.box().SetBorder(c) } }
-func Radius(r int16) Option     { return func(d Node) { d.box().SetRadius(r) } }
+func Radius(r float32) Option   { return func(d Node) { d.box().SetRadius(r) } }
 
 // Gap sets the spacing between children of a Flex or Grid.
 func Gap(g float32) Option {

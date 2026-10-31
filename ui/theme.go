@@ -18,8 +18,8 @@ type Theme struct {
 	Muted     gfx.Color
 	Font      *gfx.Font
 	SmallFont *gfx.Font
-	// Radius rounds bordered controls, in units.
-	Radius int16
+	// Radius rounds bordered controls, in logical pixels.
+	Radius float32
 	// RowPadding insets the text of list rows, fields, headers and captions.
 	RowPadding Insets
 	// ButtonPadding surrounds a button's label inside its border.

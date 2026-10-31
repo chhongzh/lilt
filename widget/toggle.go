@@ -24,8 +24,7 @@ func (m *mark) init(radio bool) {
 func (m *mark) Leaf() {}
 
 func (m *mark) Measure(ui.Vec2) ui.Vec2 {
-	s := float32(ui.Round(markSize * ui.Unit()))
-	return ui.Vec2{X: s, Y: s}
+	return ui.Vec2{X: markSize, Y: markSize}
 }
 
 // turn is not called set: TinyGo 0.42 and 0.43 crash compiling a type that
@@ -51,7 +50,7 @@ func (m *mark) Draw(c gfx.Canvas) {
 		}
 		return
 	}
-	c.StrokeRoundRect(gfx.Rect{W: size, H: size}, 2, col)
+	c.StrokeRoundRect(gfx.Rect{W: size, H: size}, ui.Dp(2), col)
 	if fill > 0 {
 		c.FillRect(gfx.Rect{X: h - fill + 1, Y: h - fill + 1, W: 2*fill - 1, H: 2*fill - 1}, col)
 	}

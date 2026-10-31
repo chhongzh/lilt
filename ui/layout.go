@@ -33,7 +33,7 @@ func Measure(d Node, max Vec2) Vec2 {
 	w, autoW := resolve(b.width, max.X)
 	h, autoH := resolve(b.height, max.Y)
 	if autoW || autoH {
-		p := padPx(b)
+		p := b.padding
 		inner := Vec2{max.X, max.Y}
 		if !autoW {
 			inner.X = w
@@ -67,7 +67,7 @@ func contentSize(d Node, max Vec2) Vec2 {
 		if !cb.visible() {
 			continue
 		}
-		m := marginPx(cb)
+		m := cb.margin
 		cs := Measure(c, shrink(max, m))
 		s.X = max32(s.X, cs.X+m.Horizontal()+cb.pos.X)
 		s.Y = max32(s.Y, cs.Y+m.Vertical()+cb.pos.Y)
@@ -101,19 +101,13 @@ func ArrangeFree(c Node, area Rect) {
 	if !cb.visible() {
 		return
 	}
-	m := marginPx(cb)
+	m := cb.margin
 	avail := shrink(Vec2{area.W, area.H}, m)
 	s := Measure(c, avail)
 	x := area.X + m.Left + cb.anchor.X*avail.X - cb.origin.X*s.X + cb.pos.X
 	y := area.Y + m.Top + cb.anchor.Y*avail.Y - cb.origin.Y*s.Y + cb.pos.Y
 	Arrange(c, Rect{x, y, s.X, s.Y})
 }
-
-func padPx(b *Box) Insets    { return b.padding.Scale(Unit()) }
-func marginPx(b *Box) Insets { return b.margin.Scale(Unit()) }
-
-// radiusPx scales a corner radius given in units.
-func radiusPx(r int16) int16 { return Round(float32(r) * Unit()) }
 
 func shrink(v Vec2, m Insets) Vec2 {
 	return Vec2{max32(v.X-m.Horizontal(), 0), max32(v.Y-m.Vertical(), 0)}

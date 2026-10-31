@@ -169,19 +169,21 @@ func (b *Button) CursorShape(r ui.Rect) ui.Rect {
 
 func (b *Button) Draw(c gfx.Canvas) {
 	r := b.Rect()
-	cx, cy := ui.Round(r.W/2), ui.Round(r.H/2)
+	cx, cy := ui.Dp(r.W/2), ui.Dp(r.H/2)
+	d3, d4 := ui.Dp(3), ui.Dp(4)
 	col := ui.CurrentTheme.Foreground
 	if b.state == loading {
 		drawDots(c, cx, cy, b.elapsed, col)
 	}
 	if b.mark != idle && b.result.Get() < 1.99 {
-		y := cy + ui.Round((1-b.result.Get())*r.H)
+		y := cy + ui.Dp((1-b.result.Get())*r.H)
 		if b.mark == succeeded {
-			c.Line(cx-4, y, cx-1, y+3, col)
-			c.Line(cx-1, y+3, cx+4, y-3, col)
+			d1 := ui.Dp(1)
+			c.Line(cx-d4, y, cx-d1, y+d3, col)
+			c.Line(cx-d1, y+d3, cx+d4, y-d3, col)
 		} else {
-			c.Line(cx-3, y-3, cx+3, y+3, col)
-			c.Line(cx-3, y+3, cx+3, y-3, col)
+			c.Line(cx-d3, y-d3, cx+d3, y+d3, col)
+			c.Line(cx-d3, y+d3, cx+d3, y-d3, col)
 		}
 	}
 }

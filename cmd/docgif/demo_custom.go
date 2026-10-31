@@ -93,32 +93,32 @@ func (s *Slider) SetValue(v int) {
 // --8<-- [end:custom-slider-type]
 
 // --8<-- [start:custom-slider-draw]
-// knobRadius is 3 units in pixels, so the knob grows with the theme font.
-func knobRadius() int16 { return ui.Round(3 * ui.Unit()) }
+// knobRadius is in logical pixels, like all layout.
+const knobRadius = 3
 
 func (s *Slider) Measure(max ui.Vec2) ui.Vec2 {
-	return ui.Vec2{X: max.X, Y: float32(2*knobRadius() + 3)}
+	return ui.Vec2{X: max.X, Y: 2*knobRadius + 3}
 }
 
-// knobX is the knob's centre in the node's own pixels, where it is now.
+// knobX is the knob's centre in the node's own coordinates, where it is now.
 func (s *Slider) knobX() float32 {
 	c := s.ContentRect()
-	r := float32(knobRadius())
-	return c.X + r + (c.W-2*r)*s.knob.Get()/float32(s.steps)
+	return c.X + knobRadius + (c.W-2*knobRadius)*s.knob.Get()/float32(s.steps)
 }
 
+// Draw works in physical pixels: Pixels and Dp convert from layout.
 func (s *Slider) Draw(c gfx.Canvas) {
 	t := ui.CurrentTheme
-	area := s.ContentRect().Pixels()
-	cy := area.Y + area.H/2
-	track := gfx.Rect{X: area.X, Y: cy - 2, W: area.W, H: 5}
-	c.StrokeRoundRect(track, 2, t.Foreground)
-	kx := ui.Round(s.knobX())
+	area := s.ContentRect()
+	cy := area.Center().Y
+	track := ui.Rect{X: area.X, Y: cy - 2.5, W: area.W, H: 5}.Pixels()
+	c.StrokeRoundRect(track, ui.Dp(2), t.Foreground)
+	kx := ui.Dp(s.knobX())
 	track.W = kx - track.X
-	c.FillRoundRect(track, 2, t.Foreground)
-	r := knobRadius()
-	c.FillCircle(kx, cy, r+1, t.Background)
-	c.FillCircle(kx, cy, r, t.Foreground)
+	c.FillRoundRect(track, ui.Dp(2), t.Foreground)
+	r := ui.Dp(knobRadius)
+	c.FillCircle(kx, ui.Dp(cy), r+ui.Dp(1), t.Background)
+	c.FillCircle(kx, ui.Dp(cy), r, t.Foreground)
 }
 
 // --8<-- [end:custom-slider-draw]
@@ -160,7 +160,7 @@ func (s *Slider) move(dir int) {
 // --8<-- [start:custom-slider-cursor]
 // CursorShape wraps the cursor round the knob instead of the whole row.
 func (s *Slider) CursorShape(r ui.Rect) ui.Rect {
-	d := float32(2*knobRadius() + 5)
+	d := float32(2*knobRadius + 5)
 	return ui.Rect{X: r.X + s.knobX() - d/2, Y: r.Y + (r.H-d)/2, W: d, H: d}
 }
 
@@ -199,16 +199,17 @@ func (b *Battery) SetLevel(l float32) { b.level.Set(l) }
 func (b *Battery) Leaf() {} // refuses children
 
 func (b *Battery) Measure(max ui.Vec2) ui.Vec2 {
-	return ui.Vec2{X: 18 * ui.Unit(), Y: 9 * ui.Unit()}
+	return ui.Vec2{X: 18, Y: 9}
 }
 
 func (b *Battery) Draw(c gfx.Canvas) {
 	fg := ui.CurrentTheme.Foreground
 	r := b.ContentRect().Pixels()
-	body := gfx.Rect{X: r.X, Y: r.Y, W: r.W - 2, H: r.H}
-	c.StrokeRoundRect(body, 2, fg)
-	c.FillRect(gfx.Rect{X: body.Right(), Y: r.Y + r.H/4, W: 2, H: r.H / 2}, fg)
-	fill := body.Inset(2)
+	tip := ui.Dp(2)
+	body := gfx.Rect{X: r.X, Y: r.Y, W: r.W - tip, H: r.H}
+	c.StrokeRoundRect(body, ui.Dp(2), fg)
+	c.FillRect(gfx.Rect{X: body.Right(), Y: r.Y + r.H/4, W: tip, H: r.H / 2}, fg)
+	fill := body.Inset(ui.Dp(2))
 	// The spring overshoots a little; keep the fill inside the body.
 	fill.W = ui.Round(float32(fill.W) * min(max(b.level.Get(), 0), 1))
 	c.FillRect(fill, fg)
