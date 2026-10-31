@@ -14,7 +14,7 @@ import "github.com/chhongzh/lilt/ui"
 
 | 写法 | 含义 |
 | --- | --- |
-| `ui.Px(v)` | 固定 `v` 像素，不随[单位](theme.md#unit)缩放 |
+| `ui.Px(v)` | 固定 `v` 个[逻辑像素](theme.md#scale) |
 | `ui.Rel(f)` | 父节点内容区（去掉内边距和自己的外边距之后）的 `f` 倍 |
 | `ui.Auto` | 默认值，按内容定 |
 
@@ -62,7 +62,7 @@ import "github.com/chhongzh/lilt/ui"
 
 ## 外边距与内边距
 
-外边距（`Margin`）是节点外面留的空，内边距（`Padding`）是节点边框和内容之间留的空。两者都是 `ui.Insets`，以**单位**计，绘制时乘 `ui.Unit()` 变成像素，见[主题与单位](theme.md#unit)。
+外边距（`Margin`）是节点外面留的空，内边距（`Padding`）是节点边框和内容之间留的空。两者都是 `ui.Insets`，以逻辑像素计，见[主题与缩放](theme.md#scale)。
 
 | 写法 | 结果 |
 | --- | --- |
@@ -90,7 +90,7 @@ import "github.com/chhongzh/lilt/ui"
 --8<-- "cmd/docgif/demo_layout.go:layout-flex"
 ```
 
-子节点之间的间距用 `ui.Gap(g)` 或 `SetGap(g)` 设，单位是单位。主轴上的空余空间按 `MainAlign` 分配：
+子节点之间的间距用 `ui.Gap(g)` 或 `SetGap(g)` 设，以逻辑像素计。主轴上的空余空间按 `MainAlign` 分配：
 
 | 值 | 效果 |
 | --- | --- |
@@ -148,7 +148,7 @@ import "github.com/chhongzh/lilt/ui"
 - 不设列时只有一列 `Fr(1)`。
 - 每行和这一行最高的子节点一样高。
 - 宽是 `Auto` 的子节点撑满列宽，高是 `Auto` 的撑满行高，所以按钮的宽度跟着列走。
-- `ui.Gap` 同时是行距和列距，以单位计。
+- `ui.Gap` 同时是行距和列距，以逻辑像素计。
 - 隐藏的子节点不占格子，后面的子节点往前补。
 
 方向键在格子之间按位置找最近的节点，不需要额外设置，见[输入与焦点](input.md#focus)。
@@ -183,7 +183,7 @@ import "github.com/chhongzh/lilt/ui"
 | `ui.Clip()` | `SetClip(bool)` | 节点和子节点只画在自己的矩形里，矩形外的部分也不响应触摸 |
 | `ui.Background(c)` | `SetBackground(c)` | 用颜色 `c` 填满矩形 |
 | `ui.Border(c)` | `SetBorder(c)`、`Bordered()` | 描一像素宽的边框 |
-| `ui.Radius(r)` | `SetRadius(r)` | 背景和边框的圆角，以单位计 |
+| `ui.Radius(r)` | `SetRadius(r)` | 背景和边框的圆角，以逻辑像素计 |
 
 背景和边框在节点自己的 `Draw` 之前画，不需要组件自己处理。聚焦的节点被裁剪祖先遮住一部分时，光标只框住看得见的那部分。
 

@@ -121,7 +121,7 @@ nav:
       - concepts/index.md
       - 节点树: concepts/tree.md
       - 布局: concepts/layout.md
-      - 主题与单位: concepts/theme.md
+      - 主题与缩放: concepts/theme.md
       - 线程模型: concepts/threading.md
       - 输入与焦点: concepts/input.md
       - 动画: concepts/animation.md

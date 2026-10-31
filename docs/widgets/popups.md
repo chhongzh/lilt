@@ -47,7 +47,7 @@ import "github.com/chhongzh/lilt/widget"
 --8<-- "cmd/docgif/demo_popups.go:popups-dialog"
 ```
 
-`NewDialog(title, message, buttons...)` 从上往下排：居中的标题、居中的一行小字说明、一排按钮。说明只有一行，放不下时一直滚动（[跑马灯](label.md#marquee)），传空字符串则不显示。按钮平分对话框的宽度，对话框本身占满屏幕宽度减去两边各 4 个单位。
+`NewDialog(title, message, buttons...)` 从上往下排：居中的标题、居中的一行小字说明、一排按钮。说明只有一行，放不下时一直滚动（[跑马灯](label.md#marquee)），传空字符串则不显示。按钮平分对话框的宽度，对话框本身占满屏幕宽度减去两边各 4 个逻辑像素。
 
 对话框落进屏幕中间，第一个按钮获得焦点。每个按钮的 `OnClick` 照常执行，加载点和失败的抖动都和普通 [`Button`](button.md) 一样；回调返回 `nil` 后对话框自动关闭，返回 `error` 时对话框留着，用户可以重试或换一个按钮。没有设 `OnClick` 的按钮（例子里的 `Keep`）按下就关闭对话框。按 ++back++ 也会关闭。
 
@@ -116,4 +116,4 @@ func Toast(text string)                 // 显示 2 秒，在 UI goroutine 上�
 
 `NewDialog` 不接受选项，需要时对返回值调用 `ui.Apply`。
 
-默认样式取自主题：弹窗底色 `Background`，边框 `Foreground`，圆角 `Radius`，边框内留 `PanelPadding`；抽屉标题和 Toast 用 `SmallFont` 和 `RowPadding`，抽屉标题的颜色是 `Muted`；对话框的说明用 `SmallFont`，各行之间和按钮之间隔 `Gap`（见[主题与单位](../concepts/theme.md#theme)）。
+默认样式取自主题：弹窗底色 `Background`，边框 `Foreground`，圆角 `Radius`，边框内留 `PanelPadding`；抽屉标题和 Toast 用 `SmallFont` 和 `RowPadding`，抽屉标题的颜色是 `Muted`；对话框的说明用 `SmallFont`，各行之间和按钮之间隔 `Gap`（见[主题与缩放](../concepts/theme.md#theme)）。

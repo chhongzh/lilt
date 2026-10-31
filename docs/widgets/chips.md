@@ -103,4 +103,4 @@ func (t *Toggles) SetFont(f *gfx.Font)
 | `widget.Font(f)` | 字体，用在 `Choice`、`Toggles` 上时作用于每个词 |
 | `ui.Width`、`ui.Margin` 等 | 任何 `ui.Option` 都可以用 |
 
-`OnChange` 的类型和组件不符时会 panic。默认样式取自主题：文字用 `Font`，横线和加载点用 `Foreground`（见[主题与单位](../concepts/theme.md#theme)）。每个词左右各留 3 个单位，词与词之间隔 2 个单位，`Choice` 和 `Toggles` 默认铺满父节点的宽度。
+`OnChange` 的类型和组件不符时会 panic。默认样式取自主题：文字用 `Font`，横线和加载点用 `Foreground`（见[主题与缩放](../concepts/theme.md#theme)）。每个词左右各留 3 个逻辑像素，词与词之间隔 2 个逻辑像素，`Choice` 和 `Toggles` 默认铺满父节点的宽度。

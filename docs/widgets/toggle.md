@@ -80,4 +80,4 @@ func NewRadio(g *RadioGroup, title string, opts ...ui.Option) *Radio
 | `widget.Font(f)` | 标题字体 |
 | `ui.Width`、`ui.Grow` 等 | 任何 `ui.Option` 都可以用 |
 
-勾选框和圆圈边长 9 个单位，用主题的 `Foreground` 画，开关时内部的方块或圆点由 `anim.Bouncy` 弹簧放大、缩小（[弹簧预设](../concepts/animation.md#presets)）。行的内边距同 `ListItem`，取自主题的 `RowPadding`。
+勾选框和圆圈边长 9 个逻辑像素，用主题的 `Foreground` 画，开关时内部的方块或圆点由 `anim.Bouncy` 弹簧放大、缩小（[弹簧预设](../concepts/animation.md#presets)）。行的内边距同 `ListItem`，取自主题的 `RowPadding`。

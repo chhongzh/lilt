@@ -72,4 +72,4 @@ func (s *Select) SetSelected(i int)     // 不触发 OnChange；越界时行尾�
 | `widget.Font(f)` | 标题字体；行尾的当前选项固定用 `SmallFont` |
 | `ui.Width`、`ui.Grow` 等 | 任何 `ui.Option` 都可以用 |
 
-默认样式取自主题：行的内边距 `RowPadding`，标题字体 `Font`，当前选项 `SmallFont`（见[主题与单位](../concepts/theme.md#theme)）。抽屉的样式见 [Drawer](popups.md#drawer)。
+默认样式取自主题：行的内边距 `RowPadding`，标题字体 `Font`，当前选项 `SmallFont`（见[主题与缩放](../concepts/theme.md#theme)）。抽屉的样式见 [Drawer](popups.md#drawer)。

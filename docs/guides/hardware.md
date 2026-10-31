@@ -1,6 +1,6 @@
 # 接入硬件
 
-lilt 本身不读引脚、不碰总线：除了 `driver/sh1106`，所有包都不 import `machine`。板子上的代码负责两件事：给出一块实现了 `gfx.Screen` 的屏幕，把按键（或触摸、键盘）事件交给 `ui`。这一页讲这两件事怎么做。
+lilt 本身不读引脚、不碰总线：除了 `driver/sh1106` 和 `driver/jd9853`，所有包都不 import `machine`。板子上的代码负责两件事：给出一块实现了 `gfx.Screen` 的屏幕，把按键（或触摸、键盘）事件交给 `ui`。这一页讲这两件事怎么做。
 
 ## 屏幕接口 { #screen }
 
@@ -40,7 +40,7 @@ lilt.Start(gfx.FromDisplayer(dev), home)
 
 `FromDisplayer` 把 `Flush` 接到驱动的 `Display`。驱动有 `FillRectangle` 方法时用它填充，没有就逐点 `SetPixel`。单色驱动自己决定什么颜色算亮，例如 ssd1306 把任何非纯黑的颜色都当作亮。
 
-> **以下均未测试，但理论上可运行。** 实际测过的只有 [examples/esp32s3-generic](https://github.com/chhongzh/lilt/tree/main/examples/esp32s3-generic) 里的 SH1106，用的是本仓库自己的驱动。
+> **以下均未测试，但理论上可运行。** 实际测过的只有 [examples/esp32s3-generic](https://github.com/chhongzh/lilt/tree/main/examples/esp32s3-generic) 里的 SH1106，用的是本仓库自己的驱动。本仓库的 `driver/jd9853` 自带帧缓冲和反色，见[彩色屏与帧缓冲](#color)。
 
 **带帧缓冲的单色屏**：最合适。框架画进驱动的缓冲区，`Display` 一次推整屏。
 
@@ -212,7 +212,16 @@ func (s *rgb565) clip(x, y, w, h int16) (x0, y0, x1, y1 int) {
 }
 ```
 
-接到 st7789 上是 `lilt.Start(newRGB565(&dev), home)`。缓冲区的大小是宽 × 高 × 2 字节，240x240 要 115 KB，先确认芯片的 RAM 放得下。
+接到 st7789 上是 `lilt.Start(newRGB565(&dev), home)`。
+
+`driver/jd9853` 就是这样的驱动：`Device` 自己实现 `gfx.Screen` 和 `gfx.Inverter`，帧缓冲是 RGB565，`Flush` 只推改过的那几行。它不管 CS 和 RESET，这两根线由调用方处理，完整的接法见 [examples/ledong-v2](https://github.com/chhongzh/lilt/tree/main/examples/ledong-v2)：
+
+```go
+lcd := jd9853.New(machine.SPI0, dcPin)
+lcd.Configure(jd9853.Config{}) // 默认 320x172 横屏
+gallery.FitFonts(lcd.Size())
+lilt.Start(lcd, home)
+```缓冲区的大小是宽 × 高 × 2 字节，240x240 要 115 KB，先确认芯片的 RAM 放得下。
 
 彩色屏还要改主题。组件在构造时读取主题，所以在建树之前改：
 
@@ -226,7 +235,7 @@ t.Font = &freesans.Regular18pt7b                   // 大屏换大字体
 home := hello() // 改完主题再建树
 ```
 
-换成行高更大的字体后，`ui.Unit()` 随之变大，所有以单位计的内边距、间距和圆角一起放大，见[主题与单位](../concepts/theme.md#unit)。默认字体是 12pt 的 Notosans；`freesans` 是 `tinygo.org/x/tinyfont/freesans`，任何 tinyfont 字体都可以。
+屏幕比 128×64 大时，框架把所有逻辑像素按比例放大，内边距、间距、圆角都不用改；只有字体要换成大约 `ui.ScaleFor(w, h)` 倍大的，见[逻辑像素与缩放](../concepts/theme.md#scale)。默认字体是 12pt 的 Notosans；`freesans` 是 `tinygo.org/x/tinyfont/freesans`，任何 tinyfont 字体都可以。
 
 ## 按键 { #keys }
 

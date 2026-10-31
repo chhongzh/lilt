@@ -58,7 +58,7 @@
 
 | 签名 | 说明 | 详见 |
 | --- | --- | --- |
-| `type Rect struct { X, Y, W, H int16 }` | 像素矩形；布局用的是 float32 的 `ui.Rect`，用 `Pixels()` 转过来 | [测量与绘制](../guides/custom-widget.md#measure) |
+| `type Rect struct { X, Y, W, H int16 }` | 物理像素矩形；布局用的是逻辑像素、float32 的 `ui.Rect`，用 `Pixels()` 转过来 | [测量与绘制](../guides/custom-widget.md#measure) |
 | `func (r Rect) Empty() bool` | 宽或高不大于 0 | [画布](../guides/custom-widget.md#canvas) |
 | `func (r Rect) Right() int16`、`Bottom() int16` | 右边、下边（不含） | [画布](../guides/custom-widget.md#canvas) |
 | `func (r Rect) Contains(x, y int16) bool` | 点是否在内 | [画布](../guides/custom-widget.md#canvas) |
@@ -73,5 +73,5 @@
 | --- | --- | --- |
 | `type Font = tinyfont.Font` | tinyfont 位图字体，字形需按 rune 排序（tinyfont 生成器就是这样输出的） | [主题](../concepts/theme.md#theme) |
 | `func Ascent(f *Font) int16` | 最高字形顶部到基线的距离 | [画布](../guides/custom-widget.md#canvas) |
-| `func LineHeight(f *Font) int16` | 一行字占的高度；`ui.Unit()` 由它算出 | [单位](../concepts/theme.md#unit) |
+| `func LineHeight(f *Font) int16` | 一行字占的物理高度；逻辑高度用 `ui.LineHeight` | [字体](../concepts/theme.md#fonts) |
 | `func TextWidth(f *Font, s string) int16` | 文字的前进宽度 | [画布](../guides/custom-widget.md#canvas) |

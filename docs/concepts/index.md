@@ -6,7 +6,7 @@ lilt 的界面是一棵节点树，由一个 UI goroutine 独占：它每帧处�
 | --- | --- |
 | [节点树](tree.md) | `Node` 和 `Box`、用选项嵌套建树、增删节点、节点靠哪些接口获得能力 |
 | [布局](layout.md) | 尺寸、锚点、`Stack`、`Flex`、`Grid`，以及位置变化时的滑动 |
-| [主题与单位](theme.md) | `Theme` 的字段和默认值、单位如何随字体缩放、光标的弹簧 |
+| [主题与缩放](theme.md) | `Theme` 的字段和默认值、逻辑像素如何缩放到屏幕、光标的弹簧 |
 | [线程模型](threading.md) | 回调为什么不在 UI goroutine 上、`ui.Do` 和 `widget.Control` |
 | [输入与焦点](input.md) | 按键的阶段、激活规则、焦点怎么移动、按键怎么分发 |
 | [动画](animation.md) | `anim.Value`、`anim.Spring` 和几个预设 |
