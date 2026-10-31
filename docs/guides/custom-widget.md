@@ -23,7 +23,7 @@
 - **嵌入 `ui.Box`**。`ui.Node` 接口只有一个未导出的方法，只有嵌入了 `ui.Box` 的类型才满足它。`Box` 带着父子链接、尺寸、内边距和动画偏移；要把子节点排成一行或一列，就改为嵌入 `ui.Flex`（`ListItem` 就是这样）。
 - **构造函数收 `...ui.Option`，`ui.Apply` 放最后**。先设好默认值，再应用选项，调用方传的 `ui.Width`、`ui.Padding` 才能覆盖默认值。所有标准组件都是这个顺序，见[选项](../concepts/tree.md#options)。
 - **自己的选项就是 `func(ui.Node)`**。`OnSlide` 断言出 `*Slider` 再写字段，用在别的节点上会 panic，和 `widget` 包的选项一样。
-- **默认内边距从主题取**。这里用 `RowPadding`，所以它和列表行左右对齐，换主题时一起变，见[主题与单位](../concepts/theme.md#theme)。
+- **默认内边距从主题取**。这里用 `RowPadding`，所以它和列表行左右对齐，换主题时一起变，见[主题与缩放](../concepts/theme.md#theme)。
 - **状态走 Set/Get**。`SetValue` 是代码里改值的入口，按约定它不调用回调。
 
 改了状态之后要告诉框架：影响尺寸的调用 `ui.Relayout()`，只影响外观的调用 `ui.Invalidate()`。`SetValue` 两个都没调，因为它只改了 `anim.Value` 的目标，而帧循环在任何 `anim.Value` 还在动时都会重绘，见[动画](#animation)。
@@ -57,7 +57,7 @@
 
 - **只有可聚焦的节点能拿到焦点和按键**。在构造函数里 `SetFocusable(true)`，或者让调用方传 `ui.Focusable()`。
 - **`Draw` 和 `DrawOver` 收到的画布已经平移到节点左上角**（含 `OffsetX`、`OffsetY` 的动画偏移）；只有 `SetClip(true)` 的节点才会被裁剪到自己的矩形里。`SetBackground`、`SetBorder` 的底色和边框由 `Box` 先画好，`Draw` 画在它们上面。
-- **`Measure` 的返回值是像素**，`max` 是内边距以内还剩的空间。宽高都是固定值或比例时不会调用它。
+- **`Measure` 的返回值是逻辑像素**，`max` 是内边距以内还剩的空间。宽高都是固定值或比例时不会调用它。
 - **`HandleKey` 在 `Press` 上返回 `true`，就认领了这个键**，之后的 `Repeat` 和 `Release` 直接送到这个节点，不再冒泡。返回 `false` 交给祖先，最后由框架处理：方向键移动焦点，Back 关闭当前页面或弹窗。分发路径见[按键分发](../concepts/input.md#dispatch)。
 - **`Updater` 只在需要逐帧推进时实现**，例如计时器、跑马灯。只是让一个数值动起来，用 `anim.Value` 就够了，不需要 `Update`。
 
@@ -69,14 +69,14 @@
 
 `Slider` 的宽度要多少给多少，高度刚好放下圆钮。几个容易弄混的地方：
 
-- **单位和像素**。`Padding`、`Margin`、`Gap`、`Radius` 用的是单位，`Measure`、`Draw` 里用的是像素。`ui.Unit()` 是一个单位等于多少像素，默认字体下是 1，换大字体时变大。圆钮半径写成 `3 * ui.Unit()`，所以字体放大时它跟着放大，见[单位](../concepts/theme.md#unit)。
-- **`ContentRect()` 已经扣掉了内边距**，是节点自己坐标系里的像素，类型是 `ui.Rect`（float32）。画图前用 `Pixels()` 转成 `gfx.Rect`，它对四条边分别取整，相邻的矩形取整后仍然相邻。
+- **逻辑像素和物理像素**。布局、`Measure`、`ContentRect()` 都是逻辑像素，只有 `Draw` 收到的画布是物理像素。`knobRadius` 写成 3 个逻辑像素，画的时候用 `ui.Dp` 换算，所以屏幕放大时圆钮跟着放大，见[逻辑像素与缩放](../concepts/theme.md#scale)。
+- **`ContentRect()` 已经扣掉了内边距**，是节点自己坐标系里的逻辑像素，类型是 `ui.Rect`（float32）。画图前用 `Pixels()` 转成物理像素的 `gfx.Rect`，它对四条边分别缩放、取整，相邻的矩形取整后仍然相邻。
 - **`knobX` 用 `s.knob.Get()`**，即圆钮此刻的位置，而不是目标位置，这样画出来的就是动画中的样子。
 - **颜色取自 `ui.CurrentTheme`**，不要写死。单色屏上 `Background` 和 `Foreground` 就是灭和亮；先用 `Background` 画一圈稍大的圆，再画圆钮，圆钮和填充条之间就留出一道缝。
 
 ## 画布 { #canvas }
 
-`gfx.Canvas` 是屏幕的一个平移、裁剪过的视图。它是值类型：`Translate` 和 `Clip` 返回新的画布，原来的不变，所以嵌套绘制不用保存和恢复状态。坐标全是 `int16` 像素，以画布原点为准。
+`gfx.Canvas` 是屏幕的一个平移、裁剪过的视图。它是值类型：`Translate` 和 `Clip` 返回新的画布，原来的不变，所以嵌套绘制不用保存和恢复状态。坐标全是 `int16` 物理像素，以画布原点为准。
 
 | 方法 | 作用 |
 | --- | --- |
@@ -89,7 +89,7 @@
 | `HLine`、`VLine` | 一像素宽的横线、竖线 |
 | `Line(x0, y0, x1, y1, col)` | 任意方向的直线（Bresenham），画勾、叉这类小图标 |
 | `FillRect`、`StrokeRect` | 实心、空心矩形 |
-| `FillRoundRect`、`StrokeRoundRect` | 圆角矩形，`radius` 是像素 |
+| `FillRoundRect`、`StrokeRoundRect` | 圆角矩形，`radius` 是物理像素 |
 | `FillCircle`、`StrokeCircle` | 圆心加半径 |
 | `Text(f, x, y, s, col)` | 一行字，`y` 是基线，返回最后一个字形之后的 `x` |
 | `InvertRect`、`InvertRoundRect` | 把区域里的像素反色，屏幕实现了 `gfx.Inverter` 才有效 |
@@ -102,7 +102,7 @@ y := box.Y + (box.H-gfx.LineHeight(f))/2 + gfx.Ascent(f)
 c.Text(f, x, y, s, col)
 ```
 
-`gfx.TextWidth(f, s)` 量文字宽度，可以拿来右对齐或在 `Measure` 里报尺寸。字体是 tinyfont 的位图字体，主题里有 `Font` 和 `SmallFont` 两种。
+`gfx.TextWidth(f, s)` 量文字的物理宽度，在 `Draw` 里右对齐时用；`Measure` 里要报逻辑尺寸，用 `ui.TextWidth` 和 `ui.LineHeight`。字体是 tinyfont 的位图字体，主题里有 `Font` 和 `SmallFont` 两种。
 
 反色只在实现了 `gfx.Inverter` 的屏幕上生效，其他屏幕上 `InvertRect` 什么也不做。需要反色效果的组件先问 `CanInvert()`，不能反色时换一种画法，光标就是这样：能反色时把焦点节点反色，不能时画一个 `Accent` 色的轮廓。哪些屏幕能反色见[接入硬件](hardware.md#inverter)。
 

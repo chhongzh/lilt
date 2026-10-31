@@ -89,16 +89,16 @@ func (c *Chip) Update(dt float32) { c.tick(dt) }
 
 func (c *Chip) Draw(cv gfx.Canvas) {
 	r := c.Rect()
-	y := ui.Round(r.H) - chipBarH - 1
+	y := ui.Dp(r.H - chipBarH - 1)
 	col := ui.CurrentTheme.Foreground
 	if c.spin.Loading() {
-		drawDots(cv, ui.Round(r.W/2), y+1, c.spin.elapsed, col)
+		drawDots(cv, ui.Dp(r.W/2), y+ui.Dp(1), c.spin.elapsed, col)
 		return
 	}
 	full := ui.BoxOf(c.label).Rect().W
 	w := min(c.fill.Get()*full, full*(1+chipGrow), r.W)
-	if px := ui.Round(w); px > 0 {
-		cv.FillRect(gfx.Rect{X: ui.Round((r.W - w) / 2), Y: y, W: px, H: chipBarH}, col)
+	if px := ui.Dp(w); px > 0 {
+		cv.FillRect(gfx.Rect{X: ui.Dp((r.W - w) / 2), Y: y, W: px, H: ui.Dp(chipBarH)}, col)
 	}
 }
 

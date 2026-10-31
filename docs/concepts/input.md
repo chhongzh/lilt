@@ -71,7 +71,7 @@ func (e *KeyEvent) Fires() bool // 这个事件是否该执行按键的动作
 ```go
 func Emit(k Key, p Phase)                     // 按键事件
 func EmitRune(r rune)                         // 一个字符，以 KeyChar 的 Press 送达
-func EmitPointer(x, y int16, p PointerPhase) // 触摸或鼠标，屏幕像素坐标
+func EmitPointer(x, y int16, p PointerPhase) // 触摸或鼠标，物理像素坐标；处理函数收到逻辑像素
 ```
 
 接的是机械按键时，用 `ui.KeyPoller` 把引脚电平变成干净的事件。在读引脚的循环里，每个键每次采样调用一次 `Poll`，`dt` 是距上次采样的秒数：

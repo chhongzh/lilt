@@ -61,3 +61,14 @@ jobs:
 
       - name: build firmware
         run: tinygo build -target esp32s3-generic -o gallery.bin ./examples/esp32s3-generic
+
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check

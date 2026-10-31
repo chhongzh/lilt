@@ -32,7 +32,7 @@ import "github.com/chhongzh/lilt/widget"
 !!! warning "`Trailing` 会替换原来的尾部"
     一行只有一个尾部组件，再设一次会把旧的移出节点树，`SetTrailing(nil)` 则只移除。`CheckBox`、`Radio` 的勾选框和 `Select` 的当前值都是它们的尾部组件，对这几种行用 `widget.Trailing` 会把它们换掉。
 
-`ListItem` 的内边距取自主题的 `RowPadding`，标题和尾部之间隔 4 个单位。行会裁掉超出自己的内容，滑出、滑入和抖动都不会画到别的行上。
+`ListItem` 的内边距取自主题的 `RowPadding`，标题和尾部之间隔 4 个逻辑像素。行会裁掉超出自己的内容，滑出、滑入和抖动都不会画到别的行上。
 
 ## List { #list }
 
@@ -56,7 +56,7 @@ list.Column().SetGap(ui.CurrentTheme.Gap)
 list.Column().SetPadding(ui.XY(2, 1))
 ```
 
-放按钮、输入框这类带边框的组件时就这样做，让边框和屏幕边缘、彼此之间留出空隙。`NewList` 在右侧留了 3 个单位的内边距，给滚动条让位，免得它落在光标下面。
+放按钮、输入框这类带边框的组件时就这样做，让边框和屏幕边缘、彼此之间留出空隙。`NewList` 在右侧留了 3 个逻辑像素的内边距，给滚动条让位，免得它落在光标下面。
 
 ## API
 
@@ -85,4 +85,4 @@ func (l *List) ScrollPosition() ui.Vec2          // 已滚动的距离
 | `widget.Font(f)` | 标题字体 |
 | `ui.Width`、`ui.Grow` 等 | 任何 `ui.Option` 都可以用，`List` 和 `ListItem` 都接受 |
 
-默认样式取自主题：行的内边距 `RowPadding`，标题字体 `Font`（见[主题与单位](../concepts/theme.md#theme)）。光标就是选中行的高亮，`ListItem` 自己不画背景。
+默认样式取自主题：行的内边距 `RowPadding`，标题字体 `Font`（见[主题与缩放](../concepts/theme.md#theme)）。光标就是选中行的高亮，`ListItem` 自己不画背景。

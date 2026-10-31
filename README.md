@@ -29,11 +29,11 @@ go get github.com/chhongzh/lilt@latest
 ```
 
 > [!WARNING]
-> lilt 还在 0.x 阶段，迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动。升级前先读 [CHANGELOG.md](CHANGELOG.md)，并常来看看 [Releases](https://github.com/chhongzh/lilt/releases) 里的新版本。`go list -m -u github.com/chhongzh/lilt` 可以查看有没有更新的版本。
+> lilt 还在 0.x 阶段，迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动。每个版本改了什么写在 [Releases](https://github.com/chhongzh/lilt/releases) 里，升级前先读一遍，也常来看看有没有新版本。`go list -m -u github.com/chhongzh/lilt` 可以查看有没有更新的版本。
 
 ## 文档
 
-完整文档在 <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)，每个版本的变化见 [CHANGELOG.md](CHANGELOG.md)。
+完整文档在 <https://chhongzh.github.io/lilt/>。设计需求见 [DESIGN.md](DESIGN.md)。
 
 ## 包
 
@@ -73,7 +73,7 @@ select {}                // 或者在这里跑自己的业务代码
 
 ## 支持的硬件
 
-> **以下均未测试，但理论上可运行。** 实际测过的只有 [examples/esp32s3-generic](examples/esp32s3-generic) 里的 SH1106，用的是本仓库自己的驱动。
+> **以下均未测试，但理论上可运行。** 实际测过的只有 [examples/esp32s3-generic](examples/esp32s3-generic) 里的 SH1106，用的是本仓库自己的驱动。本仓库还带一个 JD9853 彩色 LCD 驱动 `driver/jd9853`（[examples/ledong-v2](examples/ledong-v2)），它移植自在乐动 v2 上测过的代码。
 
 `gfx.Displayer` 的方法签名和 `tinygo.org/x/drivers` 的 `Displayer` 完全一致，所以下面这些驱动（drivers v0.36.0）都能直接交给 `gfx.FromDisplayer`：
 
@@ -143,7 +143,7 @@ lilt.Start(gfx.FromDisplayer(dev), home)
 ## 渲染与布局
 
 - 任何属性变化都会标记重新布局，下一帧整树重排。
-- Padding、Margin、Gap 和圆角都以单位计：一个单位等于主题字体行高除以默认字体行高。默认字体下一个单位就是一像素，换大字体时间距一起放大。行、输入框、按钮的内边距统一取自主题（`RowPadding`、`ButtonPadding`、`Gap`）；弹窗和带边框的面板与边框之间留 `PanelPadding`，抽屉贴着的那条边除外。
+- 布局全用逻辑像素，以 128×64 为基准。框架按 `min(物理宽/128, 物理高/64) × zoom` 缩放到实际屏幕，`ui.SetZoom` 手动调整 zoom。字体按自身像素大小画，大屏上换大字体（见 `gallery.FitFonts`）。行、输入框、按钮的内边距统一取自主题（`RowPadding`、`ButtonPadding`、`Gap`）；弹窗和带边框的面板与边框之间留 `PanelPadding`，抽屉贴着的那条边除外。
 - 有变化时整屏重绘，不做脏矩形。
 - 每帧不分配内存。
 - 只用 float32，不依赖 `strings` 包。
@@ -158,7 +158,7 @@ go run ./cmd/preview -o /tmp/preview
 tinygo build -target esp32s3-generic -o /tmp/gallery.bin ./examples/esp32s3-generic
 ```
 
-`go build ./...` 会因为 `driver/sh1106` 依赖 `machine` 而失败，主机上请按包名单独编译。preview 不经过 `lilt.Start`，而是通过 `internal/core` 自己逐帧推进，这样录出来的每一帧都在固定的时间点上。
+`go build ./...` 会因为 `driver/sh1106`、`driver/jd9853` 依赖 `machine` 而失败，主机上请按包名单独编译。preview 不经过 `lilt.Start`，而是通过 `internal/core` 自己逐帧推进，这样录出来的每一帧都在固定的时间点上。
 
 preview 输出两个文件：`session.gif` 是整段操作的录像，`shots.png` 是关键帧拼图。加 `-highlight` 改录半分钟的精华片段 `highlight.gif`，也就是本文开头那张。
 
@@ -210,6 +210,8 @@ png.Encode(f, scr.Image(4)) // 截一张图
 ## 示例固件
 
 [examples/esp32s3-generic](examples/esp32s3-generic) 是一台 ESP32-S3 + SH1106 + 五向摇杆的掌机，额外带一个实时显示引脚电平的按键页。材料、接线和烧录步骤见它的 [README](examples/esp32s3-generic/README.md)。
+
+[examples/ledong-v2](examples/ledong-v2) 在盛思乐动 v2（ESP32-S3 + 320×172 JD9853 LCD + A、B 两个键）上跑同一个 gallery：短按 A 下移、长按上移，短按 B 确认、长按返回。缩放是 2.5，字体由 `gallery.FitFonts` 换大。
 
 ## 贡献
 

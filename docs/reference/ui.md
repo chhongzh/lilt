@@ -18,8 +18,8 @@
 | `func (b *Box) Anchor() Vec2`、`SetAnchor(v Vec2)` | 节点挂在父节点内容区的哪一点 | [锚点](../concepts/layout.md#anchor) |
 | `func (b *Box) Origin() Vec2`、`SetOrigin(v Vec2)` | 节点自己的哪一点放在锚点上 | [锚点](../concepts/layout.md#anchor) |
 | `func (b *Box) Position() Vec2`、`SetPosition(v Vec2)` | 锚定之后再加的偏移，像素 | [锚点](../concepts/layout.md#anchor) |
-| `func (b *Box) Margin() Insets`、`SetMargin(i Insets)` | 外边距，单位 | [尺寸](../concepts/layout.md#size) |
-| `func (b *Box) Padding() Insets`、`SetPadding(i Insets)` | 内边距，单位 | [尺寸](../concepts/layout.md#size) |
+| `func (b *Box) Margin() Insets`、`SetMargin(i Insets)` | 外边距，逻辑像素 | [尺寸](../concepts/layout.md#size) |
+| `func (b *Box) Padding() Insets`、`SetPadding(i Insets)` | 内边距，逻辑像素 | [尺寸](../concepts/layout.md#size) |
 | `func (b *Box) Grow() float32`、`SetGrow(g float32)` | 在 `Flex` 里分剩余空间的份数 | [Flex](../concepts/layout.md#flex) |
 | `func (b *Box) Visible() bool`、`SetVisible(v bool)` | 隐藏的节点不占空间、不绘制、不能有焦点 | [节点树](../concepts/tree.md) |
 | `func (b *Box) Focusable() bool`、`SetFocusable(f bool)` | 能否获得焦点 | [焦点](../concepts/input.md#focus) |
@@ -28,7 +28,7 @@
 | `func (b *Box) SetBackground(c gfx.Color)` | 用 `c` 填充矩形，按圆角 | [主题](../concepts/theme.md#theme) |
 | `func (b *Box) SetBorder(c gfx.Color)` | 一像素的边框 | [主题](../concepts/theme.md#theme) |
 | `func (b *Box) Bordered() bool` | 是否画边框 | [主题](../concepts/theme.md#theme) |
-| `func (b *Box) SetRadius(r int16)` | 背景和边框的圆角，单位 | [单位](../concepts/theme.md#unit) |
+| `func (b *Box) SetRadius(r float32)` | 背景和边框的圆角，逻辑像素 | [缩放](../concepts/theme.md#scale) |
 | `func (b *Box) Rect() Rect` | 布局得到的矩形，相对父节点，不含动画偏移 | [测量与绘制](../guides/custom-widget.md#measure) |
 | `func (b *Box) ContentRect() Rect` | 内边距以内的区域，像素，自己的坐标系 | [测量与绘制](../guides/custom-widget.md#measure) |
 | `func (b *Box) OffsetX() *anim.Value`、`OffsetY() *anim.Value` | 叠加在布局位置上的动画平移，子节点跟着动 | [动画](../guides/custom-widget.md#animation) |
@@ -49,7 +49,7 @@
 | `func Position(x, y float32) Option` | 附加偏移 | [锚点](../concepts/layout.md#anchor) |
 | `func Margin(i Insets) Option`、`Padding(i Insets) Option` | 外边距、内边距 | [尺寸](../concepts/layout.md#size) |
 | `func Grow(g float32) Option` | `Flex` 里的伸展份数 | [Flex](../concepts/layout.md#flex) |
-| `func Gap(g float32) Option` | `Flex` 或 `Grid` 子节点间距，单位；用在别的节点上 panic | [Flex](../concepts/layout.md#flex) |
+| `func Gap(g float32) Option` | `Flex` 或 `Grid` 子节点间距，逻辑像素；用在别的节点上 panic | [Flex](../concepts/layout.md#flex) |
 | `func Main(m MainAlign) Option`、`Cross(c CrossAlign) Option` | `Flex` 主轴、交叉轴对齐 | [Flex](../concepts/layout.md#flex) |
 | `func Columns(cols ...Track) Option` | `Grid` 的列 | [Grid](../concepts/layout.md#grid) |
 | `func Focusable() Option` | 可获得焦点 | [焦点](../concepts/input.md#focus) |
@@ -57,7 +57,7 @@
 | `func Clip() Option` | 裁剪到自己的矩形 | [能力接口](../guides/custom-widget.md#interfaces) |
 | `func AnimateLayout() Option` | 布局变化时滑动 | [布局动画](../concepts/layout.md#animate-layout) |
 | `func Background(c gfx.Color) Option`、`Border(c gfx.Color) Option` | 背景色、边框色 | [主题](../concepts/theme.md#theme) |
-| `func Radius(r int16) Option` | 圆角，单位 | [单位](../concepts/theme.md#unit) |
+| `func Radius(r float32) Option` | 圆角，逻辑像素 | [缩放](../concepts/theme.md#scale) |
 
 ## 树操作
 
@@ -94,15 +94,21 @@
 | `func (r Rect) Right() float32`、`Bottom() float32` | 右边、下边 | [测量与绘制](../guides/custom-widget.md#measure) |
 | `func (r Rect) Center() Vec2` | 中心点 | [测量与绘制](../guides/custom-widget.md#measure) |
 | `func (r Rect) Pixels() gfx.Rect` | 四条边分别取整，相邻矩形取整后仍相邻 | [测量与绘制](../guides/custom-widget.md#measure) |
-| `type Insets struct{ Left, Top, Right, Bottom float32 }` | 外边距或内边距，单位 | [单位](../concepts/theme.md#unit) |
-| `func All(v float32) Insets` | 四边相同 | [单位](../concepts/theme.md#unit) |
-| `func XY(x, y float32) Insets` | 左右 `x`、上下 `y` | [单位](../concepts/theme.md#unit) |
-| `func LTRB(l, t, r, b float32) Insets` | 分别指定 | [单位](../concepts/theme.md#unit) |
-| `func (i Insets) Horizontal() float32`、`Vertical() float32` | 左右之和、上下之和 | [单位](../concepts/theme.md#unit) |
-| `func (i Insets) Scale(f float32) Insets` | 四边乘 `f`，乘 `Unit()` 得到像素 | [单位](../concepts/theme.md#unit) |
-| `func Unit() float32` | 一个单位等于多少像素：主题字体行高除以默认字体行高 | [单位](../concepts/theme.md#unit) |
+| `type Insets struct{ Left, Top, Right, Bottom float32 }` | 外边距或内边距，逻辑像素 | [缩放](../concepts/theme.md#scale) |
+| `func All(v float32) Insets` | 四边相同 | [缩放](../concepts/theme.md#scale) |
+| `func XY(x, y float32) Insets` | 左右 `x`、上下 `y` | [缩放](../concepts/theme.md#scale) |
+| `func LTRB(l, t, r, b float32) Insets` | 分别指定 | [缩放](../concepts/theme.md#scale) |
+| `func (i Insets) Horizontal() float32`、`Vertical() float32` | 左右之和、上下之和 | [缩放](../concepts/theme.md#scale) |
+| `func (i Insets) Scale(f float32) Insets` | 四边乘 `f` | [缩放](../concepts/theme.md#scale) |
+| `const BaseW, BaseH = 128, 64` | 布局的基准屏幕尺寸 | [缩放](../concepts/theme.md#scale) |
+| `func SetZoom(f float32)` | 在屏幕尺寸给出的缩放上再乘 `f`；在 `ScaleFor` 和 `lilt.Start` 之前调用，`f <= 0` 忽略 | [缩放](../concepts/theme.md#scale) |
+| `func Scale() float32` | 一个逻辑像素等于多少物理像素：`min(宽/BaseW, 高/BaseH) × zoom` | [缩放](../concepts/theme.md#scale) |
+| `func ScaleFor(w, h int16) float32` | `w × h` 的屏幕会得到的 `Scale`，启动前挑字体用 | [字体](../concepts/theme.md#fonts) |
+| `func Dp(v float32) int16` | 逻辑像素换算成物理像素，四舍五入 | [测量与绘制](../guides/custom-widget.md#measure) |
+| `func LineHeight(f *gfx.Font) float32` | 字体的行高，逻辑像素 | [字体](../concepts/theme.md#fonts) |
+| `func TextWidth(f *gfx.Font, s string) float32` | 文字宽度，逻辑像素 | [字体](../concepts/theme.md#fonts) |
 | `func Round(x float32) int16` | 四舍五入，.5 远离零 | [测量与绘制](../guides/custom-widget.md#measure) |
-| `func ScreenSize() (w, h int16)` | 绑定的屏幕尺寸，像素 | [屏幕接口](../guides/hardware.md#screen) |
+| `func ScreenSize() (w, h float32)` | 绑定的屏幕尺寸，逻辑像素 | [屏幕接口](../guides/hardware.md#screen) |
 
 ## 容器
 
@@ -111,7 +117,7 @@
 | `type Flex struct` | 沿一个方向排列子节点 | [Flex](../concepts/layout.md#flex) |
 | `func NewRow(opts ...Option) *Flex`、`NewColumn(opts ...Option) *Flex` | 横向、纵向的 `Flex` | [Flex](../concepts/layout.md#flex) |
 | `func (f *Flex) Axis() Axis`、`SetAxis(a Axis)` | 方向；嵌入 `Flex` 的组件用 `SetAxis` 变成一列 | [Flex](../concepts/layout.md#flex) |
-| `func (f *Flex) Gap() float32`、`SetGap(g float32)` | 子节点间距，单位 | [Flex](../concepts/layout.md#flex) |
+| `func (f *Flex) Gap() float32`、`SetGap(g float32)` | 子节点间距，逻辑像素 | [Flex](../concepts/layout.md#flex) |
 | `func (f *Flex) SetMainAlign(m MainAlign)`、`SetCrossAlign(c CrossAlign)` | 主轴、交叉轴对齐 | [Flex](../concepts/layout.md#flex) |
 | `type Axis uint8`：`Horizontal`、`Vertical` | `Flex` 的方向 | [Flex](../concepts/layout.md#flex) |
 | `type MainAlign uint8`：`MainStart`、`MainCenter`、`MainEnd`、`MainSpaceBetween` | 没有子节点伸展时，主轴上的剩余空间怎么分 | [Flex](../concepts/layout.md#flex) |
@@ -119,7 +125,7 @@
 | `type Grid struct` | 按列逐行摆放，行高取该行最高的子节点，`Auto` 尺寸的子节点填满格子 | [Grid](../concepts/layout.md#grid) |
 | `func NewGrid(opts ...Option) *Grid` | 没设置列时为一列 `Fr(1)` | [Grid](../concepts/layout.md#grid) |
 | `func (g *Grid) SetColumns(cols ...Track)` | 设置列 | [Grid](../concepts/layout.md#grid) |
-| `func (g *Grid) SetGap(gap float32)` | 行列间距，单位 | [Grid](../concepts/layout.md#grid) |
+| `func (g *Grid) SetGap(gap float32)` | 行列间距，逻辑像素 | [Grid](../concepts/layout.md#grid) |
 | `type Track struct` | 一列的宽度 | [Grid](../concepts/layout.md#grid) |
 | `func Fixed(px float32) Track` | 固定像素 | [Grid](../concepts/layout.md#grid) |
 | `func Fr(n float32) Track` | 剩余宽度的份数 | [Grid](../concepts/layout.md#grid) |
@@ -173,8 +179,8 @@
 | `func (e *KeyEvent) Fires() bool` | 是否该执行动作：未取消且前面没有连发的 `Release`，或每个 `Repeat` | [激活](../concepts/input.md#activation) |
 | `func Emit(k Key, p Phase)` | 发一个按键事件；任何 goroutine | [按键](../guides/hardware.md#keys) |
 | `func EmitRune(r rune)` | 发一个键入的字符；任何 goroutine | [物理键盘](../guides/hardware.md#keys) |
-| `func EmitPointer(x, y int16, p PointerPhase)` | 发一个触摸或鼠标事件，屏幕像素；任何 goroutine | [触摸屏](../guides/hardware.md#keys) |
-| `type PointerEvent struct{ X, Y int16; Phase PointerPhase }` | 一个指针事件 | [分发](../concepts/input.md#dispatch) |
+| `func EmitPointer(x, y int16, p PointerPhase)` | 发一个触摸或鼠标事件，物理像素；任何 goroutine | [触摸屏](../guides/hardware.md#keys) |
+| `type PointerEvent struct{ X, Y float32; Phase PointerPhase }` | 一个指针事件，逻辑像素 | [分发](../concepts/input.md#dispatch) |
 | `type PointerPhase uint8`：`PointerDown`、`PointerMove`、`PointerUp` | 按下、移动、抬起 | [触摸屏](../guides/hardware.md#keys) |
 | `type KeyPoller struct` | 把按键电平变成消抖后的按下、连发、松开，连发会加速 | [KeyPoller](../concepts/input.md#keypoller) |
 | `func NewKeyPoller() *KeyPoller` | 默认 `Debounce` 2、`RepeatDelay` 0.2、`RepeatInterval` 0.07、`MinInterval` 0.03、`Accel` 0.9 | [KeyPoller](../concepts/input.md#keypoller) |
@@ -235,8 +241,8 @@
 | `Theme.Background`、`Foreground` | 背景色、前景色 | [主题](../concepts/theme.md#theme) |
 | `Theme.Accent` | 屏幕不能反色时光标的颜色 | [反色光标](../guides/hardware.md#inverter) |
 | `Theme.Muted` | 提示和禁用文字 | [主题](../concepts/theme.md#theme) |
-| `Theme.Font`、`SmallFont` | 正文字体、小字体；`Font` 的行高决定 `Unit()` | [单位](../concepts/theme.md#unit) |
-| `Theme.Radius` | 带边框控件的圆角，单位 | [主题](../concepts/theme.md#theme) |
+| `Theme.Font`、`SmallFont` | 正文字体、小字体；大屏上换大字体 | [字体](../concepts/theme.md#fonts) |
+| `Theme.Radius` | 带边框控件的圆角，逻辑像素 | [主题](../concepts/theme.md#theme) |
 | `Theme.RowPadding` | 列表行、输入框、标题的文字内边距 | [主题](../concepts/theme.md#theme) |
 | `Theme.ButtonPadding` | 按钮文字和边框之间的距离 | [主题](../concepts/theme.md#theme) |
 | `Theme.Gap` | 抽屉、对话框、带内边距的列表里控件之间的间距 | [主题](../concepts/theme.md#theme) |

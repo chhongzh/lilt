@@ -6,7 +6,7 @@ import (
 )
 
 // CursorShaper lets the focused node change the cursor's rect, given in
-// screen pixels. Hold-to-confirm buttons use it to shrink the cursor.
+// logical screen coordinates. Hold-to-confirm buttons use it to shrink the cursor.
 type CursorShaper interface{ CursorShape(r Rect) Rect }
 
 const (
@@ -38,7 +38,7 @@ type Cursor struct {
 	target     Rect
 	has        bool
 	hasPointer bool
-	px, py     int16
+	px, py     float32
 }
 
 func (c *Cursor) init() {
@@ -81,7 +81,7 @@ func (c *Cursor) clear() {
 	c.leanX, c.leanY = 0, 0
 }
 
-func (c *Cursor) pointerAt(x, y int16) {
+func (c *Cursor) pointerAt(x, y float32) {
 	c.hasPointer, c.px, c.py = true, x, y
 }
 
@@ -117,8 +117,8 @@ func (c *Cursor) update() {
 	lx, ly := c.leanX, c.leanY
 	if c.hasPointer {
 		m := r.Center()
-		lx += clamp((float32(c.px)-m.X)*leanFactor, -leanMax, leanMax)
-		ly += clamp((float32(c.py)-m.Y)*leanFactor, -leanMax, leanMax)
+		lx += clamp((c.px-m.X)*leanFactor, -leanMax, leanMax)
+		ly += clamp((c.py-m.Y)*leanFactor, -leanMax, leanMax)
 	}
 	c.shiftX.Set(lx)
 	c.shiftY.Set(ly)
@@ -161,7 +161,7 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 		return
 	}
 	p := r.Pixels()
-	rad := min(radiusPx(CurrentTheme.Radius), p.H/2, p.W/2)
+	rad := min(Dp(CurrentTheme.Radius), p.H/2, p.W/2)
 	if cv.CanInvert() {
 		cv.InvertRoundRect(p, rad)
 	} else {
@@ -169,14 +169,14 @@ func (c *Cursor) draw(cv gfx.Canvas) {
 	}
 }
 
-// screenRect returns d's rect in screen pixels exactly as paint will place
-// it, clipped by its clipping ancestors. When nothing is visible the unclipped
+// screenRect returns d's rect in logical screen coordinates exactly as paint
+// will place it, clipped by its clipping ancestors. When nothing is visible the unclipped
 // rect is returned so the cursor does not fly to the corner.
 func screenRect(d Node) (Rect, bool) {
 	x, y := pixelOrigin(d)
 	p := pixelRect(d.box())
 	own := gfx.Rect{X: x, Y: y, W: p.W, H: p.H}
-	vis := own.Intersect(gfx.Rect{W: scrW, H: scrH})
+	vis := own.Intersect(gfx.Rect{W: physW, H: physH})
 	for n := d.box().parent; n != nil; n = n.box().parent {
 		b := n.box()
 		if b.flags&flagClip == 0 {
@@ -189,7 +189,8 @@ func screenRect(d Node) (Rect, bool) {
 	if vis.Empty() {
 		vis = own
 	}
-	return Rect{float32(vis.X), float32(vis.Y), float32(vis.W), float32(vis.H)}, !vis.Empty()
+	k := 1 / scale
+	return Rect{float32(vis.X) * k, float32(vis.Y) * k, float32(vis.W) * k, float32(vis.H) * k}, !vis.Empty()
 }
 
 // pixelRect is b's rect plus its offset, rounded the way paint rounds it.
@@ -197,7 +198,7 @@ func pixelRect(b *Box) gfx.Rect {
 	return Rect{b.rect.X + b.offsetX.Get(), b.rect.Y + b.offsetY.Get(), b.rect.W, b.rect.H}.Pixels()
 }
 
-// pixelOrigin is d's top-left corner on screen as paint computes it.
+// pixelOrigin is d's top-left corner in physical pixels as paint computes it.
 func pixelOrigin(d Node) (x, y int16) {
 	for n := d; n != nil; n = n.box().parent {
 		p := pixelRect(n.box())

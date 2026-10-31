@@ -50,9 +50,9 @@ type Scroll struct {
 	hideBar bool
 
 	dragging  bool
-	dragStart [2]int16
+	dragStart [2]float32
 	dragFrom  [2]float32
-	last      [2]int16
+	last      [2]float32
 	step      [2]float32
 }
 
@@ -222,7 +222,7 @@ func (s *Scroll) Reveal(d ui.Node) {
 			continue
 		}
 		lo, size := span(r, i)
-		m := revealMargin * ui.Unit()
+		m := float32(revealMargin)
 		if lo < s.pos[i] {
 			s.pos[i] = lo - m
 		} else if lo+size > s.pos[i]+s.view[i] {
@@ -332,7 +332,7 @@ func (s *Scroll) room(i int, sign float32) float32 {
 }
 
 func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
-	p := [2]int16{e.X, e.Y}
+	p := [2]float32{e.X, e.Y}
 	switch e.Phase {
 	case ui.PointerDown:
 		s.dragging, s.dragStart, s.last = false, p, p
@@ -340,7 +340,7 @@ func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
 		return false
 	case ui.PointerMove:
 		if !s.dragging {
-			dx, dy := absf(float32(p[0]-s.dragStart[0])), absf(float32(p[1]-s.dragStart[1]))
+			dx, dy := absf(p[0]-s.dragStart[0]), absf(p[1]-s.dragStart[1])
 			if (dy >= dx && !s.on(1)) || (dx > dy && !s.on(0)) {
 				return false
 			}
@@ -350,12 +350,12 @@ func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool {
 			if !s.on(i) {
 				continue
 			}
-			raw := s.dragFrom[i] + float32(s.dragStart[i]-p[i])
+			raw := s.dragFrom[i] + s.dragStart[i] - p[i]
 			s.pos[i] = clampf(raw, 0, s.limit[i])
 			to := -s.pos[i] - anim.RubberBand(raw-s.pos[i], s.view[i])
 			s.offset(i).Jump(to)
 			s.thumb[i].Jump(-to)
-			s.step[i] = float32(s.last[i] - p[i])
+			s.step[i] = s.last[i] - p[i]
 		}
 		s.last = p
 		ui.Invalidate()
@@ -390,11 +390,11 @@ func (s *Scroll) DrawOver(c gfx.Canvas) {
 	}
 	if s.on(1) && s.limit[1] > 0 {
 		lo, size := thumb(s.thumb[1].Get(), s.limit[1], s.view[1])
-		c.VLine(ui.Round(r.W-edge), ui.Round(in.Y+lo), ui.Round(size), col)
+		c.VLine(ui.Dp(r.W-edge), ui.Dp(in.Y+lo), ui.Dp(size), col)
 	}
 	if s.on(0) && s.limit[0] > 0 {
 		lo, size := thumb(s.thumb[0].Get(), s.limit[0], s.view[0])
-		c.HLine(ui.Round(in.X+lo), ui.Round(r.H-edge), ui.Round(size), col)
+		c.HLine(ui.Dp(in.X+lo), ui.Dp(r.H-edge), ui.Dp(size), col)
 	}
 }
 

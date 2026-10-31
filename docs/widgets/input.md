@@ -142,4 +142,4 @@ func EmitRune(r rune) // 送入一个字符，任何 goroutine 都可以调用
 | `widget.Font(f)` | 文字字体 |
 | `ui.Width`、`ui.Grow` 等 | 任何 `ui.Option` 都可以用 |
 
-默认样式取自主题：边框用 `Foreground`，圆角 `Radius`，内边距 `RowPadding`，占位文字用 `Muted`（见[主题与单位](../concepts/theme.md#theme)）。软键盘的键和预览用 `SmallFont`。
+默认样式取自主题：边框用 `Foreground`，圆角 `Radius`，内边距 `RowPadding`，占位文字用 `Muted`（见[主题与缩放](../concepts/theme.md#theme)）。软键盘的键和预览用 `SmallFont`。

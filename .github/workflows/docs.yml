@@ -7,7 +7,6 @@ on:
     paths:
       - "docs/**"
       - "overrides/**"
-      - "CHANGELOG.md"
       - "mkdocs.yml"
       - "cmd/docgif/**"
       - "internal/reel/**"

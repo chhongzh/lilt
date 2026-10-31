@@ -69,4 +69,4 @@ func (l *Label) Leaf()                     // 不接受子节点
 | `widget.MarqueeMode(m)` | 跑马灯模式 |
 | `ui.Padding`、`ui.FillWidth` 等 | 任何 `ui.Option` 都可以用 |
 
-默认样式取自主题：字体 `Font`，颜色 `Foreground`（见[主题与单位](../concepts/theme.md#theme)）。没有用 `TextColor` 设置过颜色的 `Label` 在每次绘制时读主题，改了主题的 `Foreground` 会跟着变；字体则在构造、`SetText`、`SetFont` 时测量，改主题字体要放在构造组件之前。
+默认样式取自主题：字体 `Font`，颜色 `Foreground`（见[主题与缩放](../concepts/theme.md#theme)）。没有用 `TextColor` 设置过颜色的 `Label` 在每次绘制时读主题，改了主题的 `Foreground` 会跟着变；字体则在构造、`SetText`、`SetFont` 时测量，改主题字体要放在构造组件之前。

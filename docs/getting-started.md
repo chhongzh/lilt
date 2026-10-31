@@ -23,11 +23,11 @@ go get github.com/chhongzh/lilt@latest
 go get github.com/chhongzh/lilt@v0.1.0
 ```
 
-所有已发布的版本见 [GitHub Releases](https://github.com/chhongzh/lilt/releases)，每个版本改了什么见[更新日志](changelog.md)。
+所有已发布的版本，以及每个版本改了什么，都在 [GitHub Releases](https://github.com/chhongzh/lilt/releases) 里。
 
 !!! warning "lilt 还在 0.x 阶段"
 
-    lilt 迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动，补丁版本只修 bug。`go.mod` 会记下你用的确切版本，只有你自己运行 `go get` 才会升级；升级前先读更新日志，并定期看看有没有新版本：
+    lilt 迭代很快。1.0 之前，次版本号升级（例如 v0.1 到 v0.2）可能带来不兼容的 API 改动，补丁版本只修 bug。`go.mod` 会记下你用的确切版本，只有你自己运行 `go get` 才会升级；升级前先读 Releases 里的说明，并定期看看有没有新版本：
 
     ```bash
     go list -m -u github.com/chhongzh/lilt

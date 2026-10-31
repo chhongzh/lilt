@@ -24,10 +24,13 @@ import (
 // Config sizes the window. Zero fields take the defaults.
 type Config struct {
 	Title string // "lilt"
-	// Width and Height are the screen in pixels, 128x64 like the SH1106.
+	// Width and Height are the screen in physical pixels, 128x64 like the
+	// SH1106.
 	Width, Height int
+	// Zoom is passed to ui.SetZoom.
+	Zoom float32 // 1
 	// Scale is the initial size of a screen pixel in the window.
-	Scale int // 6
+	Scale int // what makes the window 768 pixels wide
 }
 
 var binds = [...]struct {
@@ -51,7 +54,8 @@ func Run(cfg Config, root ui.Node) error {
 	}
 	cfg.Width = orElse(cfg.Width, 128)
 	cfg.Height = orElse(cfg.Height, 64)
-	cfg.Scale = orElse(cfg.Scale, 6)
+	cfg.Scale = orElse(cfg.Scale, max(768/cfg.Width, 1))
+	ui.SetZoom(cfg.Zoom)
 
 	p := newPanel(cfg.Width, cfg.Height)
 	g := &game{p: p, poller: ui.NewKeyPoller(), last: time.Now()}

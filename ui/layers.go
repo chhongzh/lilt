@@ -70,7 +70,7 @@ func (l *layer) ArrangeChildren(r Rect) {
 // inset is the room between a popup's frame and its content. A drawer's
 // frame runs off screen along its edge, so that side needs none.
 func (l *layer) inset() Insets {
-	p := CurrentTheme.PanelPadding.Scale(Unit())
+	p := CurrentTheme.PanelPadding
 	switch l.kind {
 	case DrawerBottom:
 		p.Bottom = 0
@@ -107,7 +107,7 @@ func (l *layer) place(r Rect) Rect {
 		}
 		return Rect{r.Right() - w, r.Y, w, r.H}
 	}
-	m := popupMargin * Unit()
+	m := float32(popupMargin)
 	s := l.fit(Vec2{r.W - 2*m, r.H - 2*m})
 	w, h := s.X, s.Y
 	x := r.X + (r.W-w)/2
@@ -121,7 +121,7 @@ func (l *layer) place(r Rect) Rect {
 // came in and leaves.
 func (l *layer) away() (dx, dy float32) {
 	c := l.frame
-	w, h := float32(scrW), float32(scrH)
+	w, h := scrW, scrH
 	switch l.kind {
 	case fullPage:
 		return w, 0
@@ -151,11 +151,11 @@ func (l *layer) settled() bool { return l.offsetX.Settled() && l.offsetY.Settled
 func (l *layer) Draw(c gfx.Canvas) {
 	t := CurrentTheme
 	if l.kind == fullPage {
-		c.FillRect(gfx.Rect{W: Round(l.rect.W), H: Round(l.rect.H)}, t.Background)
+		c.FillRect(Rect{W: l.rect.W, H: l.rect.H}.Pixels(), t.Background)
 		return
 	}
 	r := l.frame.Pixels()
-	rad := radiusPx(t.Radius)
+	rad := Dp(t.Radius)
 	if l.kind <= DrawerRight {
 		// A drawer's frame runs past its edge, so only the inner corners show.
 		rad *= 2
@@ -205,8 +205,8 @@ func (s *layerStack) add(n Node, kind Popup) {
 	if kind == fullPage {
 		l.placed = true
 		if p := s.pageBelow(nil); p != nil {
-			p.offsetX.Set(-float32(scrW) / 3)
-			l.offsetX.Jump(float32(scrW))
+			p.offsetX.Set(-scrW / 3)
+			l.offsetX.Jump(scrW)
 			l.offsetX.Set(0)
 		}
 	}
@@ -335,7 +335,7 @@ func (s *layerStack) update() {
 	// part of the width, so pages are stacked until their resting spans
 	// close over the whole screen.
 	cover := -1
-	w := float32(scrW)
+	w := scrW
 	var lo, hi float32
 	for i := len(s.list) - 1; i >= 0; i-- {
 		l := s.list[i]

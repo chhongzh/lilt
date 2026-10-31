@@ -170,22 +170,22 @@ func accepts(kind, fn any) bool {
 // shake throws d sideways, the shared sign that an action failed.
 func shake(d ui.Node) { ui.BoxOf(d).OffsetX().Kick(-260) }
 
-// drawWaiting clears a patch at cx, cy and bounces the dots in it, for
+// drawWaiting clears a patch at physical cx, cy and bounces the dots in it, for
 // rows and fields whose text may run underneath.
 func drawWaiting(c gfx.Canvas, cx, cy int16, t float32) {
 	th := ui.CurrentTheme
-	u := ui.Unit()
-	w, h := ui.Round(18*u), ui.Round(7*u)
-	c.FillRect(gfx.Rect{X: cx - w/2, Y: cy - h/2 - 1, W: w, H: h}, th.Background)
-	drawDots(c, cx, cy+1, t, th.Foreground)
+	w, h := ui.Dp(18), ui.Dp(7)
+	c.FillRect(gfx.Rect{X: cx - w/2, Y: cy - h/2 - ui.Dp(1), W: w, H: h}, th.Background)
+	drawDots(c, cx, cy+ui.Dp(1), t, th.Foreground)
 }
 
-// drawDots paints three dots bouncing in turn around cx, cy.
+// drawDots paints three dots bouncing in turn around cx, cy, which are in
+// physical pixels.
 func drawDots(c gfx.Canvas, cx, cy int16, t float32, col gfx.Color) {
-	gap := ui.Round(5 * ui.Unit())
+	gap, r := ui.Dp(5), ui.Dp(1)
 	for i := int16(-1); i <= 1; i++ {
 		phase := float64(t)*7 - float64(i)*0.8
-		lift := ui.Round(float32(2 * math.Abs(math.Sin(phase))))
-		c.FillCircle(cx+i*gap, cy-lift, 1, col)
+		lift := ui.Dp(float32(2 * math.Abs(math.Sin(phase))))
+		c.FillCircle(cx+i*gap, cy-lift, r, col)
 	}
 }

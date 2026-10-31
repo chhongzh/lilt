@@ -19,9 +19,9 @@ const (
 )
 
 const (
-	marqueeSpeed = 24 // px/s
+	marqueeSpeed = 24 // logical px/s
 	marqueePause = 1  // s at each end
-	marqueeGap   = 2  // px kept clear past the last glyph
+	marqueeGap   = 2  // logical px kept clear past the last glyph
 )
 
 type marqueePhase uint8
@@ -42,7 +42,7 @@ type Label struct {
 	color   *gfx.Color
 	align   float32
 	marquee Marquee
-	textW   int16
+	textW   int16 // physical pixels, as the font draws
 
 	phase  marqueePhase
 	timer  float32
@@ -107,12 +107,16 @@ func (l *Label) restart() {
 }
 
 func (l *Label) Measure(max ui.Vec2) ui.Vec2 {
-	return ui.Vec2{X: min(float32(l.textW), max.X), Y: float32(gfx.LineHeight(l.Font()))}
+	return ui.Vec2{X: min(l.width(), max.X), Y: ui.LineHeight(l.Font())}
+}
+
+func (l *Label) width() float32 {
+	return float32(l.textW) / ui.Scale()
 }
 
 // overflow is how far the text runs past the content box.
 func (l *Label) overflow() float32 {
-	return float32(l.textW) + marqueeGap - l.ContentRect().W
+	return l.width() + marqueeGap - l.ContentRect().W
 }
 
 func (l *Label) scrolling() bool {
@@ -177,7 +181,7 @@ func (l *Label) Draw(c gfx.Canvas) {
 	}
 	x := box.X + ui.Round(l.align*float32(box.W-l.textW))
 	if over := l.overflow(); over > marqueeGap {
-		x = box.X - ui.Round(l.shift(over))
+		x = box.X - ui.Dp(l.shift(over))
 	}
 	y := box.Y + (box.H-gfx.LineHeight(f))/2 + gfx.Ascent(f)
 	c.Text(f, x, y, l.text, col)

@@ -30,7 +30,7 @@ func (g *Grid) SetColumns(cols ...Track) {
 	Relayout()
 }
 
-// SetGap sets the space between rows and columns, in units.
+// SetGap sets the space between rows and columns, in logical pixels.
 func (g *Grid) SetGap(gap float32) {
 	if g.gap != gap {
 		g.gap = gap
@@ -44,7 +44,7 @@ func (g *Grid) columnWidths(avail float32) {
 		fixed += t.px
 		fr += t.fr
 	}
-	rest := max32(avail-fixed-g.gap*Unit()*float32(len(g.cols)-1), 0)
+	rest := max32(avail-fixed-g.gap*float32(len(g.cols)-1), 0)
 	for i, t := range g.cols {
 		g.widths[i] = t.px
 		if fr > 0 {
@@ -59,7 +59,7 @@ func (g *Grid) rows(maxH float32, place func(row []Node, y, h float32)) float32 
 	var y float32
 	start, col := 0, 0
 	var h float32
-	gap := g.gap * Unit()
+	gap := g.gap
 	flush := func(end int) {
 		if place != nil {
 			place(g.children[start:end], y, h)
@@ -73,7 +73,7 @@ func (g *Grid) rows(maxH float32, place func(row []Node, y, h float32)) float32 
 		if !cb.visible() {
 			continue
 		}
-		m := marginPx(cb)
+		m := cb.margin
 		cb.measured = Measure(c, shrink(Vec2{g.widths[col], maxH}, m))
 		h = max32(h, cb.measured.Y+m.Vertical())
 		col++
@@ -90,7 +90,7 @@ func (g *Grid) rows(maxH float32, place func(row []Node, y, h float32)) float32 
 
 func (g *Grid) MeasureChildren(max Vec2) Vec2 {
 	g.columnWidths(max.X)
-	w := g.gap * Unit() * float32(len(g.cols)-1)
+	w := g.gap * float32(len(g.cols)-1)
 	for _, cw := range g.widths {
 		w += cw
 	}
@@ -99,7 +99,7 @@ func (g *Grid) MeasureChildren(max Vec2) Vec2 {
 
 func (g *Grid) ArrangeChildren(content Rect) {
 	g.columnWidths(content.W)
-	gap := g.gap * Unit()
+	gap := g.gap
 	g.rows(content.H, func(row []Node, y, h float32) {
 		x := content.X
 		col := 0
@@ -110,7 +110,7 @@ func (g *Grid) ArrangeChildren(content Rect) {
 			}
 			w := g.widths[col]
 			s := cb.measured
-			m := marginPx(cb)
+			m := cb.margin
 			if cb.width.mode == autoSize {
 				s.X = w - m.Horizontal()
 			}

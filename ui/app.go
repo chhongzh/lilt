@@ -24,9 +24,10 @@ var TextInput TextInputMethod
 
 // The UI is a singleton: one screen, one tree, one of each manager.
 var (
-	screen     gfx.Screen
-	scrW, scrH int16
-	root       = &Stack{}
+	screen       gfx.Screen
+	physW, physH int16
+	scrW, scrH   float32 // logical
+	root         = &Stack{}
 
 	layers layerStack
 	focus  focusManager
@@ -47,8 +48,10 @@ func init() {
 
 func boot(s gfx.Screen, first any) {
 	screen = s
-	scrW, scrH = s.Size()
-	root.width, root.height = Px(float32(scrW)), Px(float32(scrH))
+	physW, physH = s.Size()
+	scale = ScaleFor(physW, physH)
+	scrW, scrH = float32(physW)/scale, float32(physH)/scale
+	root.width, root.height = Px(scrW), Px(scrH)
 	Relayout()
 	if n, ok := first.(Node); ok && n != nil {
 		Push(n)
@@ -77,8 +80,8 @@ func Do(fn func()) {
 	fn()
 }
 
-// ScreenSize is the size of the bound screen in pixels.
-func ScreenSize() (w, h int16) { return scrW, scrH }
+// ScreenSize is the size of the bound screen in logical pixels.
+func ScreenSize() (w, h float32) { return scrW, scrH }
 
 func frame(dt float32) (bool, error) {
 	frameMu.Lock()
@@ -93,7 +96,7 @@ func frame(dt float32) (bool, error) {
 	}
 	if needsLayout {
 		needsLayout = false
-		Arrange(root, Rect{0, 0, float32(scrW), float32(scrH)})
+		Arrange(root, Rect{0, 0, scrW, scrH})
 		layers.focusFirst()
 	}
 	cursor.update()
@@ -102,7 +105,7 @@ func frame(dt float32) (bool, error) {
 	}
 	needsDraw = false
 	c := gfx.NewCanvas(screen)
-	c.FillRect(gfx.Rect{W: scrW, H: scrH}, CurrentTheme.Background)
+	c.FillRect(gfx.Rect{W: physW, H: physH}, CurrentTheme.Background)
 	// Toasts float above the cursor so a focused row cannot invert them.
 	for _, l := range layers.list {
 		if l.kind != Toast {
@@ -146,7 +149,7 @@ func paint(d Node, c gfx.Canvas) {
 		c = c.Clip(local)
 	}
 	if b.flags&(flagBackground|flagBorder) != 0 {
-		rad := radiusPx(b.radius)
+		rad := Dp(b.radius)
 		if b.flags&flagBackground != 0 {
 			c.FillRoundRect(local, rad, b.bg)
 		}
@@ -165,15 +168,16 @@ func paint(d Node, c gfx.Canvas) {
 	}
 }
 
-// hitTest finds the deepest visible node under a screen point in the top screen.
-func hitTest(x, y int16) Node {
+// hitTest finds the deepest visible node under a logical point in the top
+// screen. It compares in physical pixels, where nodes are drawn.
+func hitTest(x, y float32) Node {
 	s := layers.scope()
 	if s == nil {
 		return nil
 	}
 	ox, oy := pixelOrigin(s)
 	p := pixelRect(s.box())
-	return hit(s, x, y, ox-p.X, oy-p.Y)
+	return hit(s, Dp(x), Dp(y), ox-p.X, oy-p.Y)
 }
 
 func hit(d Node, x, y, ox, oy int16) Node {
@@ -209,6 +213,8 @@ func Emit(k Key, p Phase) { input.Emit(k, p) }
 // EmitRune queues a typed character. Safe to call from any goroutine.
 func EmitRune(r rune) { input.EmitRune(r) }
 
-// EmitPointer queues a touch or mouse event in screen pixels. Safe to call
-// from any goroutine.
-func EmitPointer(x, y int16, p PointerPhase) { input.EmitPointer(x, y, p) }
+// EmitPointer queues a touch or mouse event at physical screen pixels x, y;
+// handlers receive it in logical pixels. Safe to call from any goroutine.
+func EmitPointer(x, y int16, p PointerPhase) {
+	input.EmitPointer(float32(x)/scale, float32(y)/scale, p)
+}

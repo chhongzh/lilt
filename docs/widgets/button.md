@@ -67,4 +67,4 @@ func (b *Button) Loading() bool
 | `widget.Font(f)` | 文字字体 |
 | `ui.Width`、`ui.Grow` 等 | 任何 `ui.Option` 都可以用 |
 
-默认样式取自主题：边框用 `Foreground`，圆角 `Radius`，内边距 `ButtonPadding`（见[主题与单位](../concepts/theme.md)）。在 `Row` 里并排放几个按钮时，给它们 `ui.Grow(1)` 平分宽度，[`Dialog`](popups.md#dialog) 就是这样排按钮的。
+默认样式取自主题：边框用 `Foreground`，圆角 `Radius`，内边距 `ButtonPadding`（见[主题与缩放](../concepts/theme.md)）。在 `Row` 里并排放几个按钮时，给它们 `ui.Grow(1)` 平分宽度，[`Dialog`](popups.md#dialog) 就是这样排按钮的。

@@ -210,7 +210,7 @@ func buttonClick() ui.Node {
     | focus | 焦点 |
     | activate | 激活 |
     | handler / callback | 回调 |
-    | unit | 单位 |
+    | logical pixel | 逻辑像素 |
     | spring | 弹簧 |
     | marquee | 跑马灯 |
     | Press / Repeat / Release | 按下 / 连发 / 松开 |
@@ -226,7 +226,7 @@ func buttonClick() ui.Node {
 - `OnClick`、`OnChange` 的回调在自己的 goroutine 上跑。回调里改树必须包在 `ui.Do` 里；`ui.Do` 不能嵌套。
 - 代码里调用 Set 改值不触发 `OnChange`。
 - 树只属于 UI goroutine。`lilt.Start` 之前在任何地方建树都可以。
-- Padding、Margin、Gap、Radius 的单位是“单位”，不是像素；共用的内边距从主题取（`RowPadding`、`ButtonPadding`、`Gap`、`PanelPadding`）。
+- 所有长度（`Px`、Padding、Margin、Gap、Radius）都是以 128×64 为基准的逻辑像素，只有 `Draw` 里是物理像素；共用的内边距从主题取（`RowPadding`、`ButtonPadding`、`Gap`、`PanelPadding`）。
 - 弹窗的边框和内边距由层栈画、由层栈留，弹窗内容自己不要再加。
 - 自定义组件不要声明和 `ui.Box`、`ui.Flex` 未导出方法同名的方法（`box`、`set`、`visible`、`split`、`join`、`margins`、`crossAuto`），TinyGo 0.42/0.43 会崩溃。讲自定义组件时要提醒这一点。
 - `ui.Push` 的页面铺满整屏，锚点对页面根节点不起作用。

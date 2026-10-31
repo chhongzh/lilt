@@ -16,11 +16,11 @@ import "github.com/chhongzh/lilt/widget"
 
 `NewScroll(content, axes)` 的第二个参数选滚动方向：`widget.ScrollVertical`、`widget.ScrollHorizontal` 或两个方向都滚的 `widget.ScrollBoth`。沿滚动方向，内容按不受限的大小测量；`Scroll` 自己的大小不超过父节点给的空间，所以要给它尺寸，比如上面的 `ui.FillWidth()`，高度则由外面的列给。`ui.Add(s, child)` 会加到内容里（`Scroll` 实现了 [`ui.ContentHost`](../concepts/tree.md#interfaces)），`Content()` 返回内容节点本身。
 
-滚动条是沿右边缘或下边缘的一道细线，有边框时画在边框里面。它和光标都在右边，所以例子给右边留了 3 个单位，免得细线压在光标上；`List` 默认就这样留。
+滚动条是沿右边缘或下边缘的一道细线，有边框时画在边框里面。它和光标都在右边，所以例子给右边留了 3 个逻辑像素，免得细线压在光标上；`List` 默认就这样留。
 
 按方向键时 `Scroll` 按这个顺序处理：
 
-1. 下一个焦点在内容里、离当前视野不远（不超过半屏）：焦点照常移过去，`Scroll` 把它滚进视野，四周留 2 个单位。
+1. 下一个焦点在内容里、离当前视野不远（不超过半屏）：焦点照常移过去，`Scroll` 把它滚进视野，四周留 2 个逻辑像素。
 2. 下一个焦点离得很远，或者后面已经没有可聚焦的节点：每按一下（或每次连发）滚 16 像素，直到滚到头。
 3. 已经滚到头：按下的瞬间内容被往外拉 16 像素，按住时每次连发再多拉 16 像素，松手弹回。
 
@@ -44,7 +44,7 @@ import "github.com/chhongzh/lilt/widget"
 --8<-- "cmd/docgif/demo_scroll.go:scroll-shelf"
 ```
 
-横向时滚动条在下边缘，所以给下面留 3 个单位。这样的一排放进竖向的列表里，上下键在排与排之间移动，左右键在排里移动，和电视菜单一样。在一排的两端继续按左右键时，即使上下别的行还有更靠边的节点，焦点也不会斜着跳过去，而是这一排回弹。
+横向时滚动条在下边缘，所以给下面留 3 个逻辑像素。这样的一排放进竖向的列表里，上下键在排与排之间移动，左右键在排里移动，和电视菜单一样。在一排的两端继续按左右键时，即使上下别的行还有更靠边的节点，焦点也不会斜着跳过去，而是这一排回弹。
 
 ## 波浪 { #stagger }
 
@@ -108,4 +108,4 @@ func (s *Scroll) HandlePointer(e *ui.PointerEvent) bool         // 处理拖动
 | `ui.Padding(...)` | 给滚动条留位置 |
 | `ui.Border(...)`、`ui.Radius(...)` | 带边框的滚动区域，滚动条画在边框里面 |
 
-滚动条用主题的 `Foreground`，弹簧是 `anim.Snappy`（见[主题与单位](../concepts/theme.md#theme)）。内容始终至少和视野一样大，所以短内容的对齐、`Grow` 照常生效。
+滚动条用主题的 `Foreground`，弹簧是 `anim.Snappy`（见[主题与缩放](../concepts/theme.md#theme)）。内容始终至少和视野一样大，所以短内容的对齐、`Grow` 照常生效。

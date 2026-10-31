@@ -130,7 +130,7 @@ func (k *SoftKeyboard) refresh() {
 	s := string(k.buf) + "_"
 	k.preview.SetText(s)
 	// Keep the caret in view once the text outgrows the box.
-	fits := float32(gfx.TextWidth(k.preview.Font(), s)) <= k.preview.Rect().W-4
+	fits := ui.TextWidth(k.preview.Font(), s) <= k.preview.Rect().W-4
 	if fits {
 		k.preview.SetAlign(0)
 	} else {
@@ -172,7 +172,7 @@ func (c *key) Leaf() {}
 
 func (c *key) Measure(ui.Vec2) ui.Vec2 {
 	f := ui.CurrentTheme.SmallFont
-	return ui.Vec2{X: float32(gfx.TextWidth(f, c.text)) + 2, Y: float32(gfx.LineHeight(f)) + 1}
+	return ui.Vec2{X: ui.TextWidth(f, c.text) + 2, Y: ui.LineHeight(f) + 1}
 }
 
 func (c *key) Draw(cv gfx.Canvas) {
@@ -187,7 +187,7 @@ func (c *key) Draw(cv gfx.Canvas) {
 	col := ui.CurrentTheme.Foreground
 	cv.Text(f, x, y, s, col)
 	if c.kind == keyShift && c.k.shift {
-		cv.HLine(x, r.H-1, gfx.TextWidth(f, s), col)
+		cv.HLine(x, r.H-ui.Dp(1), gfx.TextWidth(f, s), col)
 	}
 }
 

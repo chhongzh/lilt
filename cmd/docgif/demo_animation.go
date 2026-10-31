@@ -60,10 +60,11 @@ func (l *lane) Measure(max ui.Vec2) ui.Vec2 { return ui.Vec2{X: max.X, Y: 7} }
 func (l *lane) Draw(c gfx.Canvas) {
 	r := l.Rect().Pixels()
 	col := ui.CurrentTheme.Foreground
-	left, w, y := int16(6), r.W-16, r.H/2
-	c.VLine(left, y-2, 5, col)
-	c.VLine(left+w, y-2, 5, col)
-	c.FillCircle(left+ui.Round(l.pos.Get()*float32(w)), y, 2, col)
+	left, w, y := ui.Dp(6), r.W-ui.Dp(16), r.H/2
+	tick := ui.Dp(5)
+	c.VLine(left, y-tick/2, tick, col)
+	c.VLine(left+w, y-tick/2, tick, col)
+	c.FillCircle(left+ui.Round(l.pos.Get()*float32(w)), y, ui.Dp(2), col)
 }
 
 // --8<-- [end:animation-lane]

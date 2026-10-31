@@ -1,0 +1,56 @@
+# GoReleaser publishes the GitHub release when a version tag is pushed, from
+# .github/workflows/release.yml; RELEASING.md has the whole process. lilt is
+# a library, so nothing is built: the release is the notes and the tag that
+# `go get` resolves.
+version: 2
+
+project_name: lilt
+
+builds:
+  - skip: true
+
+changelog:
+  # Entries link to their commit and author on GitHub.
+  use: github
+  sort: asc
+  # Each pattern allows the "sha: " prefix GitHub entries carry, then expects
+  # a Conventional Commits type at the start of the message.
+  filters:
+    exclude:
+      - '^([0-9a-f]+: )?(docs|chore|ci|test|style)(\([^)]+\))?!?:'
+      - '^([0-9a-f]+: )?Merge (branch|pull request)'
+  # A commit lands in the first group, by order, whose regexp matches it.
+  groups:
+    - title: 不兼容的改动
+      regexp: '^([0-9a-f]+: )?\w+(\([^)]+\))?!:'
+      order: 0
+    - title: 新功能
+      regexp: '^([0-9a-f]+: )?feat(\([^)]+\))?:'
+      order: 1
+    - title: 修复
+      regexp: '^([0-9a-f]+: )?fix(\([^)]+\))?:'
+      order: 2
+    - title: 性能
+      regexp: '^([0-9a-f]+: )?perf(\([^)]+\))?:'
+      order: 3
+    - title: 重构
+      regexp: '^([0-9a-f]+: )?refactor(\([^)]+\))?:'
+      order: 4
+    - title: 其他
+      order: 999
+
+release:
+  # Tags with a suffix, such as v0.3.0-rc.1, become pre-releases.
+  prerelease: auto
+  footer: |
+    ## 安装
+
+    ```bash
+    go get github.com/chhongzh/lilt@{{ .Tag }}
+    ```
+
+    lilt 还在 0.x 阶段，次版本之间可能有不兼容的改动。
+    {{- if .PreviousTag }}
+
+    完整对比：https://github.com/chhongzh/lilt/compare/{{ .PreviousTag }}...{{ .Tag }}
+    {{- end }}
